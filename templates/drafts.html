@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Drafts - Auto Job Agent</title>
+    <link rel="stylesheet" href="/static/style.css?v=1.2">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <!-- Full-Screen Overlays (Highest Priority) -->
+    <div id="loadingModal" class="modal">
+        <div class="modal-content" style="max-width: 400px; text-align: center; border: 2px solid var(--primary);">
+            <div class="spinner" style="width: 70px; height: 70px; border-width: 7px;"></div>
+            <h2 style="margin-top: 30px; color: white; font-size: 1.8rem;">Processing Request</h2>
+            <p id="loadingText" style="color: var(--text-light); margin-top: 15px; font-size: 1.1rem;">Delivering your application...</p>
+        </div>
+    </div>
+
+    <div id="statusModal" class="modal">
+        <div class="modal-content" style="text-align: center; border: 2px solid var(--success-text);">
+            <span class="close-btn" onclick="closeModal()">&times;</span>
+            <div style="font-size: 6rem; margin-bottom: 20px;">✅</div>
+            <h2 id="statusTitle" style="color: white; font-size: 2.2rem;">Success!</h2>
+            <p id="statusMessage" style="font-size: 1.2rem; color: var(--text-light); margin: 20px 0 40px 0;"></p>
+            <button class="btn btn-primary" onclick="closeModal()" style="width: 100%; padding: 18px; font-size: 1.2rem;">Continue to Dashboard</button>
+        </div>
+    </div>
+
+    <div id="promptModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closePromptModal()">&times;</span>
+            <h2 style="color: var(--primary);">Regenerate with AI</h2>
+            <p class="description">Provide specific instructions to tweak this draft (e.g., "make it more formal", "highlight my React experience"). Leave blank for a standard regeneration.</p>
+            <textarea id="promptInput" class="form-input" rows="4" style="margin-top: 15px; font-family: inherit;" placeholder="Custom instructions..."></textarea>
+            <div style="margin-top: 24px; text-align: right; display: flex; gap: 12px; justify-content: flex-end;">
+                <button class="btn btn-secondary" onclick="closePromptModal()">Cancel</button>
+                <button class="btn btn-primary" id="confirmRegenerateBtn">Regenerate Now</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <header>
+            <div class="header-left">
+                <a href="/" class="back-link">← Dashboard</a>
+                <h1>Refine & Send Drafts</h1>
+            </div>
+            <div style="display: flex; gap: 15px; align-items: center;">
+                <nav style="display: flex; gap: 20px; margin-right: 20px;">
+                    <a href="/" style="color: var(--text-light); text-decoration: none;">Dashboard</a>
+                    <a href="/drafts" style="color: var(--primary); font-weight: 700; text-decoration: none; border-bottom: 2px solid var(--primary); padding-bottom: 5px;">Drafts</a>
+                    <a href="/replies" style="color: var(--text-light); text-decoration: none;">Reply Center</a>
+                    <a href="/outreach" style="color: var(--text-light); text-decoration: none;">Outreach</a>
+                </nav>
+                <a href="/sent" class="btn btn-secondary">History</a>
+                <a href="/settings" class="btn btn-secondary">Settings</a>
+                <a href="/apply" class="btn btn-primary">+ New Draft</a>
+            </div>
+        </header>
+
+        <main>
+            {% if processing_apps %}
+            <div class="card" style="margin-bottom: 30px; border-left: 4px solid var(--primary); background: rgba(99,102,241,0.05);">
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <div class="spinner" style="width: 24px; height: 24px;"></div>
+                    <div>
+                        <h3 style="font-size: 1rem;">AI Drafting in Progress...</h3>
+                        <div style="display: flex; gap: 10px; margin-top: 8px;">
+                            {% for app in processing_apps %}
+                            <span class="badge" style="background: var(--primary); color: white; padding: 2px 10px; border-radius: 12px; font-size: 0.8rem;">{{ app.company_name or 'Researching...' }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <script>setTimeout(() => window.location.reload(), 3000);</script>
+            {% endif %}
+
+            {% for draft, app in drafts %}
+            <div class="card" style="margin-bottom: 32px; padding: 32px;" id="draft-{{ draft.id }}">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px;">
+                    <div style="flex: 1;">
+                        <h2 style="margin: 0 0 10px 0; color: var(--primary);">{{ app.company_name or 'Company Name' }}</h2>
+                        <div style="display: grid; grid-template-columns: 100px 1fr; gap: 10px; font-size: 0.9rem;">
+                            <div style="color: var(--text-light); font-weight: 600;">To:</div>
+                            <div id="recipient-{{ draft.id }}" contenteditable="true" class="form-input" style="padding: 2px 8px; border-style: dashed; border-width: 0 0 1px 0; border-radius: 0; min-height: auto;">{{ app.contact_email or '' }}</div>
+                            <div style="color: var(--text-light); font-weight: 600;">CC:</div>
+                            <div id="cc-{{ draft.id }}" contenteditable="true" class="form-input" style="padding: 2px 8px; border-style: dashed; border-width: 0 0 1px 0; border-radius: 0; min-height: auto;" placeholder="manager@company.com, hr@company.com">{{ app.cc_emails or '' }}</div>
+                            <div style="color: var(--text-light); font-weight: 600;">Subject:</div>
+                            <div id="subject-{{ draft.id }}" contenteditable="true" class="form-input" style="padding: 2px 8px; border-style: dashed; border-width: 0 0 1px 0; border-radius: 0; min-height: auto;">{{ draft.subject or 'Job Application' }}</div>
+                        </div>
+                    </div>
+                    <div style="text-align: right;">
+                        <span class="status-badge status-draft" style="box-shadow: 0 0 15px rgba(59, 130, 246, 0.2);">AI Draft Generated</span>
+                    </div>
+                </div>
+
+                <div class="draft-content" contenteditable="true" id="content-{{ draft.id }}">{{ draft.content }}</div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 24px;">
+                    <div style="color: var(--text-light); font-size: 0.85rem; display: flex; align-items: center; gap: 8px;">
+                        <span>📎</span> Automatically attaching your resume
+                    </div>
+                    <div style="display: flex; gap: 12px;">
+                        <button class="btn btn-secondary" onclick="regenerateDraft('{{ draft.id }}')">🔄 Regenerate with AI</button>
+                        <button class="btn btn-danger" onclick="deleteDraft('{{ draft.id }}')">🗑️ Trash</button>
+                        <button id="send-btn-{{ draft.id }}" class="btn btn-primary" onclick="sendEmail('{{ draft.id }}')" style="padding-left: 30px; padding-right: 30px; min-width: 220px;">
+                            <span>✈️</span> Send Application
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </main>
+    </div>
+
+    <script>
+        let currentDraftId = null;
+        function showLoading(msg = "Sending Email...") {
+            document.getElementById('loadingText').innerText = msg;
+            document.getElementById('loadingModal').classList.add('active');
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingModal').classList.remove('active');
+        }
+
+        function showStatus(title, msg, success = true) {
+            document.getElementById('statusTitle').innerText = title;
+            document.getElementById('statusMessage').innerText = msg;
+            const icon = success ? '✅' : '⚠️';
+            document.getElementById('statusModal').querySelector('div[style*="font-size: 6rem"]').innerText = icon;
+            document.getElementById('statusModal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('statusModal').classList.remove('active');
+            if (window.redirectToDashboard) {
+                window.location.href = '/';
+            } else if (window.needsReload) {
+                window.location.reload();
+            }
+        }
+
+        function regenerateDraft(draftId) {
+            currentDraftId = draftId;
+            document.getElementById('promptModal').classList.add('active');
+            document.getElementById('promptInput').focus();
+
+            document.getElementById('confirmRegenerateBtn').onclick = () => {
+                const instructions = document.getElementById('promptInput').value;
+                closePromptModal();
+                executeRegeneration(draftId, instructions);
+            };
+        }
+
+        function closePromptModal() {
+            document.getElementById('promptModal').classList.remove('active');
+            document.getElementById('promptInput').value = '';
+        }
+
+        async function executeRegeneration(draftId, instructions) {
+            showLoading("Applying AI adjustments...");
+            try {
+                const response = await fetch(`/drafts/regenerate/${draftId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ instructions: instructions })
+                });
+                const data = await response.json();
+                hideLoading();
+                if (response.ok) {
+                    document.getElementById(`content-${draftId}`).innerText = data.content;
+                    document.getElementById(`subject-${draftId}`).innerText = data.subject;
+                } else {
+                    showStatus("Error", data.detail || "Regeneration failed", false);
+                }
+            } catch (err) {
+                hideLoading();
+                showStatus("Error", "Network connection lost", false);
+            }
+        }
+
+        async function sendEmail(draftId) {
+            const sendBtn = document.getElementById(`send-btn-${draftId}`);
+            const recipient = document.getElementById(`recipient-${draftId}`).innerText.trim();
+            const subject = document.getElementById(`subject-${draftId}`).innerText.trim();
+            const content = document.getElementById(`content-${draftId}`).innerText;
+            const cc = document.getElementById(`cc-${draftId}`).innerText.trim();
+
+            if (!recipient) {
+                showStatus("Missing Info", "Please provide a recipient email address.", false);
+                return;
+            }
+
+            hideLoading(); // Safety
+            sendBtn.disabled = true;
+            sendBtn.innerHTML = '<span>⏳</span> Sending...';
+
+            showLoading(`Delivering application to ${recipient}...`);
+
+            try {
+                const payload = { recipient, subject, content };
+                if (cc) payload.cc = cc.split(',').map(e => e.trim()).filter(e => e);
+
+                const response = await fetch(`/emails/send/${draftId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                hideLoading();
+
+                if (response.ok) {
+                    showStatus("Email Sent Successfully!", "Your application has been delivered to the recruiter. Redirecting to your tracking dashboard...");
+
+                    const card = document.getElementById(`draft-${draftId}`);
+                    card.style.opacity = '0.3';
+                    card.style.pointerEvents = 'none';
+                    setTimeout(() => card.remove(), 1000);
+
+                    window.redirectToDashboard = true;
+                } else {
+                    const data = await response.json();
+                    showStatus("Delivery Failed", data.detail || "Server error occurred", false);
+                    sendBtn.disabled = false;
+                    sendBtn.innerHTML = '<span>✈️</span> Send Application';
+                }
+            } catch (err) {
+                hideLoading();
+                showStatus("Error", "Connection failed", false);
+                sendBtn.disabled = false;
+                sendBtn.innerHTML = '<span>✈️</span> Send Application';
+            }
+        }
+
+        async function deleteDraft(draftId) {
+            if (!confirm("Permanently discard this draft?")) return;
+            try {
+                const response = await fetch(`/drafts/${draftId}`, { method: 'DELETE' });
+                if (response.ok) document.getElementById(`draft-${draftId}`).remove();
+            } catch (err) { }
+        }
+
+        window.onclick = function (event) {
+            if (event.target.classList.contains('modal')) {
+                closeModal();
+                closePromptModal();
+            }
+        }
+    </script>
+</body>
+
+</html>

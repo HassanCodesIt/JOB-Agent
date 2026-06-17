@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Set Up Profile - Auto Job Agent</title>
+    <link rel="stylesheet" href="/static/style.css?v=1.2">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        .setup-container {
+            max-width: 800px;
+            margin: 60px auto;
+            padding: 20px;
+        }
+
+        .setup-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .setup-header h1 {
+            font-size: 2.5rem;
+            color: white;
+            margin-bottom: 10px;
+        }
+
+        .setup-header p {
+            color: var(--text-light);
+            font-size: 1.1rem;
+        }
+
+        .option-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px dashed var(--border);
+            border-radius: 16px;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 30px;
+            transition: all 0.3s ease;
+        }
+
+        .option-card:hover {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.05);
+        }
+
+        .drag-zone {
+            border: 2px dashed rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 40px 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .drag-zone:hover {
+            border-color: var(--primary);
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .spinner-container {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(255, 255, 255, 0.1);
+            border-top: 5px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .status-text {
+            font-weight: 500;
+            color: white;
+            margin-top: 10px;
+        }
+
+        .profile-form {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+
+        .form-group.full-width {
+            grid-column: span 2;
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 16px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="setup-container">
+        <div class="setup-header">
+            <h1>Welcome to Auto Job Agent</h1>
+            <p>Configure your profile details to get started with automated, AI-driven applications.</p>
+        </div>
+
+        <!-- Option: AI Resume Parser -->
+        <div class="option-card">
+            <h3 style="margin-bottom: 10px; font-size: 1.3rem;">⚡ AI Resume Import</h3>
+            <p style="color: var(--text-light); margin-bottom: 20px; font-size: 0.95rem;">
+                Upload your resume PDF and we'll automatically extract your name, contact details, skills, projects, and work history.
+            </p>
+
+            <div class="drag-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+                <div style="font-size: 3rem; margin-bottom: 10px;">📄</div>
+                <div style="font-weight: 600;">Drag & Drop Resume PDF here</div>
+                <div style="font-size: 0.85rem; color: var(--text-light); margin-top: 5px;">or click to browse files</div>
+                <input type="file" id="fileInput" accept=".pdf" style="display: none;" onchange="handleFileSelect(event)">
+            </div>
+
+            <!-- Loader -->
+            <div class="spinner-container" id="loadingContainer">
+                <div class="spinner"></div>
+                <div class="status-text" id="statusMessage">Processing PDF text...</div>
+                <div style="font-size: 0.85rem; color: var(--text-light); margin-top: 5px;">Structuring data via LLM. This may take up to 20 seconds.</div>
+            </div>
+        </div>
+
+        <!-- Profile Form -->
+        <div class="profile-form">
+            <h2 style="margin-bottom: 30px; color: var(--primary); font-size: 1.5rem; border-bottom: 1px solid var(--border); padding-bottom: 10px;">
+                Personal Details & Experience
+            </h2>
+
+            <form id="setupForm" onsubmit="saveProfile(event)">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="fullName">Full Name</label>
+                        <input type="text" id="fullName" class="form-input" placeholder="e.g. John Doe" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="email">Email Address</label>
+                        <input type="email" id="email" class="form-input" placeholder="e.g. john@example.com" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="phone">Phone Number</label>
+                        <input type="tel" id="phone" class="form-input" placeholder="e.g. +1 (555) 019-2834">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="portfolioLinks">Portfolio & Social Links</label>
+                        <input type="text" id="portfolioLinks" class="form-input" placeholder="e.g. LinkedIn: ... | GitHub: ...">
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label for="skills">Key Skills (Comma Separated)</label>
+                        <textarea id="skills" class="form-input" rows="2" placeholder="e.g. Python, FastAPI, JavaScript, React, PostgreSQL" required></textarea>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label for="experience">Experience Summary</label>
+                        <textarea id="experience" class="form-input" rows="4" placeholder="Briefly describe your work history, positions, and roles..." required></textarea>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label for="projects">Key Projects</label>
+                        <textarea id="projects" class="form-input" rows="4" placeholder="List and describe your major projects, technologies used, and outcomes..."></textarea>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label for="systemPrompt">Drafting Instructions / Persona</label>
+                        <textarea id="systemPrompt" class="form-input" rows="3" placeholder="e.g. 'I am a fresher, write from that perspective' or 'Keep the tone conversational and highlight my backend architecture skills.'"></textarea>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-submit" id="submitBtn">
+                    Save Profile & Launch Dashboard
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Drag & Drop Handlers
+        const dropZone = document.getElementById('dropZone');
+        
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                dropZone.style.borderColor = 'var(--primary)';
+                dropZone.style.background = 'rgba(99, 102, 241, 0.08)';
+            }, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                dropZone.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                dropZone.style.background = 'transparent';
+            }, false);
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            if (files.length) {
+                uploadResumeFile(files[0]);
+            }
+        });
+
+        function handleFileSelect(event) {
+            const files = event.target.files;
+            if (files.length) {
+                uploadResumeFile(files[0]);
+            }
+        }
+
+        async function uploadResumeFile(file) {
+            if (file.type !== 'application/pdf') {
+                alert('Please upload a PDF file.');
+                return;
+            }
+
+            const loadingContainer = document.getElementById('loadingContainer');
+            const dragZone = document.getElementById('dropZone');
+            const statusMessage = document.getElementById('statusMessage');
+
+            dragZone.style.display = 'none';
+            loadingContainer.style.display = 'flex';
+            statusMessage.innerText = 'Extracting resume text...';
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch('/setup/parse-resume', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    statusMessage.innerText = 'Structuring details using AI...';
+                    const data = await response.json();
+                    
+                    // Fill form values
+                    document.getElementById('fullName').value = data.full_name || '';
+                    document.getElementById('email').value = data.email || '';
+                    document.getElementById('phone').value = data.phone || '';
+                    document.getElementById('portfolioLinks').value = data.portfolio_links || '';
+                    document.getElementById('skills').value = data.skills || '';
+                    document.getElementById('experience').value = data.experience || '';
+                    document.getElementById('projects').value = data.projects || '';
+                    
+                    // Display success
+                    loadingContainer.style.display = 'none';
+                    dragZone.style.display = 'block';
+                    alert('Profile fields successfully extracted and filled! Please review the form before saving.');
+                } else {
+                    const err = await response.json();
+                    alert('Extraction failed: ' + (err.detail || 'Server error. Make sure your API keys are configured correctly.'));
+                    loadingContainer.style.display = 'none';
+                    dragZone.style.display = 'block';
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Network connection error.');
+                loadingContainer.style.display = 'none';
+                dragZone.style.display = 'block';
+            }
+        }
+
+        async function saveProfile(event) {
+            event.preventDefault();
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.innerText = 'Saving profile...';
+
+            const payload = {
+                full_name: document.getElementById('fullName').value,
+                email: document.getElementById('email').value,
+                phone: document.getElementById('phone').value,
+                portfolio_links: document.getElementById('portfolioLinks').value,
+                skills: document.getElementById('skills').value,
+                experience: document.getElementById('experience').value,
+                projects: document.getElementById('projects').value,
+                system_prompt: document.getElementById('systemPrompt').value
+            };
+
+            try {
+                const response = await fetch('/setup/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok) {
+                    window.location.href = '/';
+                } else {
+                    const err = await response.json();
+                    alert('Failed to save: ' + (err.detail || 'Server error'));
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = 'Save Profile & Launch Dashboard';
+                }
+            } catch (err) {
+                alert('Connection error.');
+                submitBtn.disabled = false;
+                submitBtn.innerText = 'Save Profile & Launch Dashboard';
+            }
+        }
+    </script>
+</body>
+
+</html>

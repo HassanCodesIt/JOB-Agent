@@ -1,0 +1,38 @@
+# Environment and keys
+.env
+
+# Virtual Environment
+venv/
+ENV/
+env/
+
+# Python Cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Local Database / SQLite if any
+*.db
+*.sqlite
+
+# Application Generated Folders
+uploads/
+posters/
+screenshots/
+career_ops_pdfs/
+career_ops_temp/
+scratch/
+
+# Temporary / Backup / Dev files
+main_backup.py
+image.png
+add_backup_groq_column.py
+add_career_ops_table.py
+add_cc_emails_column.py
+add_daily_limit_column.py
+add_daily_limit_postgres.py
+cleanup_dashboard.py
+cleanup_stuck_apps.py
+update_profile.py
+career_ops_service.py

@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Outreach - Auto Job Agent</title>
+    <link rel="stylesheet" href="/static/style.css?v=1.2">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        .campaign-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--success-text);
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+
+        .status-active {
+            color: var(--success-text);
+        }
+
+        .status-paused {
+            color: var(--warning-text);
+        }
+
+        .status-completed {
+            color: var(--primary);
+        }
+
+        .status-error {
+            color: var(--danger-text);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <div class="header-left">
+                <h1>Outreach Center</h1>
+                <p style="color: var(--text-light); margin-top: 5px;">Bulk email campaigns via Google Sheets</p>
+            </div>
+            <div style="display: flex; gap: 15px; align-items: center;">
+                <div style="text-align: right; margin-right: 15px;">
+                    <div
+                        style="font-size: 0.8rem; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.5px;">
+                        Sent Today</div>
+                    <div style="font-size: 1.2rem; font-weight: 700; color: var(--success-text);">{{ sent_today }}</div>
+                </div>
+                <nav style="display: flex; gap: 20px; margin-right: 20px;">
+                    <a href="/" style="color: var(--text-light); text-decoration: none;">Dashboard</a>
+                    <a href="/drafts" style="color: var(--text-light); text-decoration: none;">Drafts</a>
+                    <a href="/replies" style="color: var(--text-light); text-decoration: none;">Reply Center</a>
+                    <a href="/outreach"
+                        style="color: var(--primary); font-weight: 700; text-decoration: none; border-bottom: 2px solid var(--primary); padding-bottom: 5px;">Outreach</a>
+                </nav>
+                <button onclick="document.getElementById('newCampaignModal').classList.add('active')"
+                    class="btn btn-primary">
+                    <span>➕</span> New Campaign
+                </button>
+            </div>
+        </header>
+
+        <main>
+            {% if not campaigns %}
+            <div class="card" style="text-align: center; padding: 60px;">
+                <div style="font-size: 3rem; margin-bottom: 20px;">📢</div>
+                <h3>No Campaigns Yet</h3>
+                <p style="color: var(--text-light); margin-bottom: 30px;">Start a bulk email campaign by connecting a
+                    Google Sheet.</p>
+                <button onclick="document.getElementById('newCampaignModal').classList.add('active')"
+                    class="btn btn-primary">Start Outreach</button>
+            </div>
+            {% else %}
+            <div class="grid" style="grid-template-columns: 1fr;">
+                {% for c in campaigns %}
+                <div class="campaign-card" id="campaign-{{ c.id }}">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <h3 style="margin-bottom: 5px;">{{ c.name }}</h3>
+                            <div style="font-size: 0.85rem; color: var(--text-light);">
+                                Created {{ c.created_at.strftime('%Y-%m-%d') }} •
+                                <span class="status-{{ c.status }}"
+                                    style="font-weight: 600; text-transform: uppercase;">{{ c.status }}</span>
+                            </div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-size: 1.5rem; font-weight: 700;">
+                                <span id="sent-{{ c.id }}">{{ c.sent_count }}</span> / <span id="total-{{ c.id }}">{{
+                                    c.total_count }}</span>
+                            </div>
+                            <div style="font-size: 0.8rem; color: var(--text-light);">Emails Sent</div>
+                        </div>
+                    </div>
+
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="prog-{{ c.id }}"
+                            style="width: {{ (c.sent_count / c.total_count * 100) if c.total_count > 0 else 0 }}%;">
+                        </div>
+                    </div>
+                    <div style="text-align: right; font-size: 0.8rem; margin-top: 5px; color: var(--text-light);">
+                        <span id="pct-{{ c.id }}">
+                            {{ ((c.sent_count / c.total_count * 100) | round(1)) if c.total_count > 0 else 0 }}%
+                        </span> Completed
+                    </div>
+
+                    <div
+                        style="margin-top: 15px; display: flex; gap: 10px; justify-content: flex-end; align-items: center;">
+                        <span style="margin-right: auto; font-size: 0.85rem;" class="status-{{ c.status }}">
+                            {% if c.status == 'active' %}
+                            ● Active
+                            {% elif c.status == 'paused' %}
+                            ❚❚ Paused
+                            {% elif c.status == 'completed' %}
+                            ✓ Completed
+                            {% elif c.status == 'error' %}
+                            ⚠ Error
+                            {% endif %}
+                        </span>
+
+                        {% if c.total_count == 0 and c.status == 'completed' %}
+                        <button onclick="toggleCampaign({{ c.id }}, 'retry')" class="btn btn-primary btn-sm"
+                            style="display: flex; align-items: center; gap: 5px;">
+                            <span>↻</span> Retry
+                        </button>
+                        {% endif %}
+
+                        {% if c.status == 'completed' and c.sent_count < c.total_count %} <button
+                            onclick="toggleCampaign({{ c.id }}, 'retry_failed')" class="btn btn-primary btn-sm"
+                            style="display: flex; align-items: center; gap: 5px;">
+                            <span>↻</span> Retry Failed
+                            </button>
+                            {% endif %}
+
+                            {% if c.status == 'active' %}
+                            <button onclick="toggleCampaign({{ c.id }}, 'pause')" class="btn btn-secondary btn-sm"
+                                style="display: flex; align-items: center; gap: 5px;">
+                                <span>⏸</span> Pause
+                            </button>
+                            {% elif c.status == 'paused' %}
+                            <button onclick="toggleCampaign({{ c.id }}, 'resume')" class="btn btn-primary btn-sm"
+                                style="display: flex; align-items: center; gap: 5px;">
+                                <span>▶</span> Resume
+                            </button>
+                            {% endif %}
+
+                            <a href="{{ c.sheet_url }}" target="_blank" class="btn btn-secondary btn-sm">📄 Sheet</a>
+                            <button onclick="viewCampaignDetails({{ c.id }}, '{{ c.name|e }}')"
+                                class="btn btn-secondary btn-sm">👁 Details</button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </main>
+    </div>
+
+    <!-- New Campaign Modal -->
+    <div id="newCampaignModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn"
+                onclick="document.getElementById('newCampaignModal').classList.remove('active')">&times;</span>
+            <h2>🚀 New Outreach Campaign</h2>
+            <p style="color: var(--text-light); font-size: 0.9rem; margin-bottom: 20px;">
+                Provide a Google Sheet link. IMPORTANT: The sheet must be publicly viewable or published to web (File >
+                Share > Publish to web > CSV).
+            </p>
+
+            <div class="form-group">
+                <label>Campaign Name</label>
+                <input type="text" id="cName" class="form-input" placeholder="e.g., HRs List Feb 2026">
+            </div>
+
+            <div class="form-group">
+                <label>Google Sheet URL</label>
+                <input type="url" id="cUrl" class="form-input" placeholder="https://docs.google.com/spreadsheets/d/...">
+            </div>
+
+            <div class="form-group">
+                <label>Header Row Number</label>
+                <input type="number" id="cHeader" class="form-input" value="1" min="1">
+                <small style="color: var(--text-light);">The row number where column names (Name, Email, etc.) are
+                    located.</small>
+            </div>
+
+            <div class="form-group">
+                <label>Target Role / Vacancy</label>
+                <input type="text" id="cContext1" class="form-input" placeholder="e.g., Senior Python Developer">
+                <small style="color: var(--text-light);">This is the position you are applying for.</small>
+            </div>
+
+            <div class="form-group">
+                <label>Additional Instructions (Optional)</label>
+                <textarea id="cContext2" class="form-input" rows="2"
+                    placeholder="e.g., Mention I have 5 years of experience."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>Daily Limit (Optional)</label>
+                <input type="number" id="cDailyLimit" class="form-input" placeholder="e.g., 30" min="1">
+                <small style="color: var(--text-light);">Maximum emails to send per day. Leave empty for
+                    unlimited.</small>
+            </div>
+
+            <button onclick="startCampaign()" class="btn btn-primary" style="width: 100%; margin-top: 20px;">Start
+                Campaign</button>
+        </div>
+    </div>
+
+    <!-- Campaign Details Modal -->
+    <div id="detailsModal" class="modal">
+        <div class="modal-content" style="max-width: 800px; width: 90%;">
+            <span class="close-btn"
+                onclick="document.getElementById('detailsModal').classList.remove('active')">&times;</span>
+            <h2 id="detailsTitle">Campaign Details</h2>
+            <div style="margin-top: 20px; max-height: 500px; overflow-y: auto;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                    <thead>
+                        <tr style="text-align: left; border-bottom: 1px solid var(--border);">
+                            <th style="padding: 10px;">Recipient</th>
+                            <th style="padding: 10px;">Company</th>
+                            <th style="padding: 10px;">Status</th>
+                            <th style="padding: 10px;">Sent At</th>
+                        </tr>
+                    </thead>
+                    <tbody id="detailsBody">
+                        <!-- Items injected here -->
+                    </tbody>
+                </table>
+            </div>
+            <div id="detailsLoading" style="text-align: center; padding: 20px; color: var(--text-light);">Loading...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function startCampaign() {
+            const name = document.getElementById('cName').value;
+            const url = document.getElementById('cUrl').value;
+            const header = document.getElementById('cHeader').value;
+            const c1 = document.getElementById('cContext1').value;
+            const c2 = document.getElementById('cContext2').value;
+            const dailyLimit = document.getElementById('cDailyLimit').value;
+
+            if (!name || !url) return alert("Please fill in Name and URL");
+
+            const btn = document.querySelector('button[onclick="startCampaign()"]');
+            btn.innerHTML = "Initializing...";
+            btn.disabled = true;
+
+            try {
+                const payload = {
+                    name: name,
+                    sheet_url: url,
+                    header_row: parseInt(header),
+                    context1: c1,
+                    context2: c2
+                };
+
+                // Add daily_limit only if provided
+                if (dailyLimit && parseInt(dailyLimit) > 0) {
+                    payload.daily_limit = parseInt(dailyLimit);
+                }
+
+                const response = await fetch('/campaigns/start', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok) {
+                    window.location.reload();
+                } else {
+                    const data = await response.json();
+                    alert("Error: " + (data.detail || "Failed to start"));
+                    btn.innerHTML = "Start Campaign";
+                    btn.disabled = false;
+                }
+            } catch (e) {
+                alert("Network error");
+                btn.innerHTML = "Start Campaign";
+                btn.disabled = false;
+            }
+        }
+
+        async function toggleCampaign(id, action) {
+            try {
+                let body = null;
+                let headers = {};
+
+                // If retrying, prompt for Header Row
+                if (action === 'retry') {
+                    const newRow = prompt("Enter the Header Row number (e.g. 7).\nLeave empty to keep existing.", "");
+                    if (newRow !== null && newRow.trim() !== "") {
+                        body = JSON.stringify({ header_row: newRow });
+                        headers['Content-Type'] = 'application/json';
+                    }
+                }
+
+                const btn = document.querySelector(`button[onclick="toggleCampaign(${id}, '${action}')"]`);
+                if (btn) {
+                    btn.disabled = true;
+                    btn.innerHTML = "Processing...";
+                }
+
+                const response = await fetch(`/campaigns/${id}/${action}`, {
+                    method: 'POST',
+                    headers: headers,
+                    body: body
+                });
+
+                if (response.ok) {
+                    window.location.reload();
+                } else {
+                    const data = await response.json();
+                    alert("Error: " + (data.detail || "Action failed"));
+                    if (btn) {
+                        btn.disabled = false;
+                        let label = "Action";
+                        if (action === 'retry') label = '↻ Retry';
+                        else if (action === 'retry_failed') label = '↻ Retry Failed';
+                        else if (action === 'pause') label = '⏸ Pause';
+                        else if (action === 'resume') label = '▶ Resume';
+                        btn.innerHTML = label;
+                    }
+                }
+            } catch (e) {
+                console.error(e);
+                alert("Network error");
+            }
+        }
+
+        async function viewCampaignDetails(id, name) {
+            document.getElementById('detailsTitle').innerText = name;
+            document.getElementById('detailsModal').classList.add('active');
+            document.getElementById('detailsBody').innerHTML = "";
+            document.getElementById('detailsLoading').style.display = "block";
+
+            try {
+                const response = await fetch(`/campaigns/${id}/items`);
+                if (!response.ok) throw new Error("Failed to fetch");
+
+                const items = await response.json();
+                const tbody = document.getElementById('detailsBody');
+                document.getElementById('detailsLoading').style.display = "none";
+
+                if (items.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 20px;">No items found</td></tr>';
+                    return;
+                }
+
+                items.forEach(item => {
+                    let statusColor = "var(--text-light)";
+                    let statusIcon = "●";
+                    if (item.status === 'sent') { statusColor = "var(--success-text)"; statusIcon = "✓"; }
+                    if (item.status === 'error') { statusColor = "var(--danger-text)"; statusIcon = "⚠"; }
+                    if (item.status === 'pending') { statusColor = "var(--warning-text)"; }
+
+                    const tr = document.createElement('tr');
+                    tr.style.borderBottom = "1px solid rgba(255,255,255,0.05)";
+                    tr.innerHTML = `
+                        <td style="padding: 10px;">
+                            <div style="font-weight: 500;">${item.recipient_name || 'N/A'}</div>
+                            <div style="font-size: 0.8em; color: var(--text-light);">${item.recipient_email}</div>
+                        </td>
+                        <td style="padding: 10px;">${item.company || '-'}</td>
+                        <td style="padding: 10px;">
+                            <span style="color: ${statusColor}; font-weight: 500;">
+                                ${statusIcon} ${item.status.toUpperCase()}
+                            </span>
+                            ${item.error_msg ? `<div style="font-size: 0.75em; color: var(--danger-text);">${item.error_msg}</div>` : ''}
+                        </td>
+                        <td style="padding: 10px; font-size: 0.85em; color: var(--text-light);">
+                            ${item.sent_at ? new Date(item.sent_at).toLocaleString() : '-'}
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (e) {
+                document.getElementById('detailsLoading').innerText = "Error loading details.";
+            }
+        }
+
+        // Simple poller for updates
+        setInterval(async () => {
+            // Find all campaign cards
+            const cards = document.querySelectorAll('.campaign-card');
+            for (let card of cards) {
+                // Determine if we need to poll this card
+                // Only poll if active or just starting (no status yet visible in JS logic easily without parsing)
+                // Better: Parse status text from the specific span we added.
+                const statusSpan = card.querySelector('span[class^="status-"]');
+                const isCompleted = statusSpan && statusSpan.classList.contains('status-completed');
+                const isError = statusSpan && statusSpan.classList.contains('status-error');
+
+                // Poll if NOT completed and NOT error.
+                if (isCompleted || isError) continue;
+
+                const id = card.id.replace('campaign-', '');
+                try {
+                    const res = await fetch(`/campaigns/${id}`);
+                    if (res.ok) {
+                        const data = await res.json();
+                        document.getElementById(`sent-${id}`).innerText = data.sent;
+                        document.getElementById(`total-${id}`).innerText = data.total;
+                        const pct = data.total > 0 ? (data.sent / data.total * 100) : 0;
+                        document.getElementById(`prog-${id}`).style.width = pct + "%";
+                        document.getElementById(`pct-${id}`).innerText = pct.toFixed(1) + "%";
+
+                        // If status changed to completed, we should reload to update buttons/UI permanently
+                        if (data.status === 'completed' && !isCompleted) {
+                            window.location.reload();
+                        }
+                    }
+                } catch (e) { }
+            }
+        }, 5000); // Poll every 5s
+    </script>
+</body>
+
+</html>

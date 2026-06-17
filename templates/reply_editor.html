@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conversation: {{ app.company_name }} - Auto Job Agent</title>
+    <link rel="stylesheet" href="/static/style.css?v=1.2">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(15, 23, 42, 0.3);
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .message {
+            padding: 15px 20px;
+            border-radius: 15px;
+            max-width: 80%;
+            position: relative;
+        }
+
+        .message.received {
+            background: var(--card-bg);
+            align-self: flex-start;
+            border-bottom-left-radius: 2px;
+            border: 1px solid var(--border);
+        }
+
+        .message.sent {
+            background: var(--primary);
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 2px;
+        }
+
+        .message-meta {
+            font-size: 0.75rem;
+            margin-bottom: 5px;
+            opacity: 0.7;
+        }
+
+        .message-content {
+            font-size: 0.95rem;
+            line-height: 1.5;
+            white-space: pre-wrap;
+        }
+
+        .prompt-bar {
+            display: flex;
+            gap: 15px;
+            background: var(--card-bg);
+            padding: 15px;
+            border-radius: 15px;
+            border: 1px solid var(--primary);
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.1);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <div class="header-left">
+                <a href="/replies"
+                    style="text-decoration: none; color: var(--text-light); font-size: 0.9rem; display: block; margin-bottom: 5px;">←
+                    Back to Reply Center</a>
+                <h1 style="display: flex; align-items: center; gap: 15px;">
+                    {{ app.company_name }}
+                    <span class="status-badge status-{{ app.status }}" style="font-size: 0.7rem;">{{ app.status|upper
+                        }}</span>
+                </h1>
+                <p style="color: var(--text-light); margin-top: 5px;">{{ app.role }} | {{ app.contact_email }}</p>
+            </div>
+            <div style="text-align: right;">
+                <div style="font-size: 0.8rem; color: var(--text-light);">Conversation started on</div>
+                <div style="font-weight: 600;">{{ app.created_at.strftime('%b %d, %Y') }}</div>
+            </div>
+        </header>
+
+        <main>
+            <div class="chat-container" id="chatHistory">
+                {% for msg in history %}
+                <div class="message {{ msg.type }}">
+                    <div class="message-meta">
+                        {{ msg.sender }} • {{ msg.time.strftime('%b %d, %H:%M') }}
+                    </div>
+                    <div class="message-content">{{ msg.content }}</div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="card" id="replyDraftArea"
+                style="display: none; margin-bottom: 25px; border: 1px solid var(--primary);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h3 style="color: var(--primary);">AI Drafted Reply</h3>
+                    <button class="btn-icon" onclick="hideDraft()" style="color: var(--text-light);">✕</button>
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <label style="font-size: 0.8rem; color: var(--text-light);">Subject</label>
+                    <input type="text" id="replySubject" class="form-input" style="padding: 10px; margin-top: 5px;">
+                </div>
+                <div>
+                    <label style="font-size: 0.8rem; color: var(--text-light);">Message</label>
+                    <textarea id="replyContent" class="form-input" rows="10"
+                        style="margin-top: 5px; font-family: inherit; font-size: 0.9rem;"></textarea>
+                </div>
+                <div style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 12px;">
+                    <button class="btn btn-secondary" onclick="hideDraft()">Discard</button>
+                    <button class="btn btn-primary" onclick="sendReply()" id="sendReplyBtn">
+                        <span>✈️</span> Send Reply Now
+                    </button>
+                </div>
+            </div>
+
+            <div class="prompt-bar">
+                <input type="text" id="promptInput" class="form-input"
+                    style="border: none; background: transparent !important;"
+                    placeholder="Ask AI to draft a reply (e.g., 'Confirm availability for Tuesday at 3pm')">
+                <button class="btn btn-primary" onclick="generateReply()" id="generateBtn" style="padding: 10px 30px;">
+                    Draft with AI
+                </button>
+            </div>
+        </main>
+    </div>
+
+    <!-- Loading Modal -->
+    <div id="loadingModal" class="modal">
+        <div class="modal-content" style="max-width: 320px; text-align:center; padding: 40px;">
+            <div class="spinner"></div>
+            <div class="loading-text" id="loadingText" style="margin-top:20px; font-weight:600;">Generating...</div>
+        </div>
+    </div>
+
+    <!-- Status Modal -->
+    <div id="statusModal" class="modal">
+        <div class="modal-content" style="text-align: center;">
+            <span class="close-btn" onclick="closeStatus()">&times;</span>
+            <div id="statusIcon" style="font-size: 4rem; margin-bottom: 20px;">✅</div>
+            <h2 id="statusTitle">Email Sent!</h2>
+            <div id="statusMessage" style="font-size: 1.1rem; color: var(--text-light); margin-bottom: 30px;"></div>
+            <button class="btn btn-primary" onclick="window.location.href='/replies'" style="width: 100%;">Back to
+                Center</button>
+        </div>
+    </div>
+
+    <script>
+        const app_id = Number("{{ app.id }}");
+
+        function showLoading(msg) {
+            document.getElementById('loadingText').innerText = msg;
+            document.getElementById('loadingModal').classList.add('active');
+        }
+        function hideLoading() {
+            document.getElementById('loadingModal').classList.remove('active');
+        }
+
+        async function generateReply() {
+            const instructions = document.getElementById('promptInput').value;
+            showLoading("AI is reading history & drafting your reply...");
+
+            try {
+                const response = await fetch('/replies/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ app_id, instructions })
+                });
+                const data = await response.json();
+                hideLoading();
+
+                if (response.ok) {
+                    document.getElementById('replySubject').value = data.subject || "RE: Job Application";
+                    document.getElementById('replyContent').value = data.body;
+                    document.getElementById('replyDraftArea').style.display = 'block';
+                    document.getElementById('replyDraftArea').scrollIntoView({ behavior: 'smooth' });
+                } else {
+                    alert(data.detail || "Failed to generate reply");
+                }
+            } catch (err) {
+                hideLoading();
+                alert("Connection failed");
+            }
+        }
+
+        function hideDraft() {
+            document.getElementById('replyDraftArea').style.display = 'none';
+        }
+
+        async function sendReply() {
+            const subject = document.getElementById('replySubject').value;
+            const content = document.getElementById('replyContent').value;
+            const recipient = {{ (app.contact_email or "") | tojson | safe
+        }};
+
+        if (!recipient) {
+            alert("Cannot send: No recipient email address found for this application.");
+            return;
+        }
+
+        const btn = document.getElementById('sendReplyBtn');
+        btn.disabled = true;
+        btn.innerText = "Sending...";
+
+        showLoading("Delivering your reply...");
+
+        try {
+            const response = await fetch('/emails/send/direct', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    app_id,
+                    recipient,
+                    subject,
+                    content
+                })
+            });
+
+            hideLoading();
+            if (response.ok) {
+                document.getElementById('statusModal').classList.add('active');
+            } else {
+                const errorData = await response.json();
+                let errMsg = "Server error";
+
+                if (errorData.detail) {
+                    if (typeof errorData.detail === 'string') {
+                        errMsg = errorData.detail;
+                    } else if (Array.isArray(errorData.detail)) {
+                        errMsg = errorData.detail.map(e => `${e.loc.join('.')}: ${e.msg}`).join('\n');
+                    } else {
+                        errMsg = JSON.stringify(errorData.detail);
+                    }
+                }
+
+                alert("Failed to send:\n" + errMsg);
+                btn.disabled = false;
+                btn.innerText = "Send Reply Now";
+            }
+        } catch (err) {
+            hideLoading();
+            alert("Network error: " + err.message);
+            btn.disabled = false;
+            btn.innerText = "Send Reply Now";
+        }
+        }
+
+        function closeStatus() {
+            document.getElementById('statusModal').classList.remove('active');
+        }
+
+        // Scroll to bottom of chat
+        const chat = document.getElementById('chatHistory');
+        chat.scrollTop = chat.scrollHeight;
+    </script>
+</body>
+
+</html>
