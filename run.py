@@ -21,6 +21,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 BACKEND = ROOT / "backend"
 VENV_PYTHON = BACKEND / "venv" / "Scripts" / "python.exe"
+if not VENV_PYTHON.exists():
+    VENV_PYTHON = ROOT / "venv" / "Scripts" / "python.exe"
 
 
 def _ensure_environment():
