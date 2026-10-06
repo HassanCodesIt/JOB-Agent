@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+
+{% block title %}{{ app.company_name or 'Conversation' }} - Command{% endblock %}
+
+{% block content %}
+<section class="inner-page">
+    <div class="inner-page-heading">
+        <div>
+            <div class="eyebrow">Conversation</div>
+            <div class="title" role="heading" aria-level="1">
+                {{ app.company_name or 'Unknown company' }}
+                <span class="status-pill status-{{ app.status }}" style="vertical-align:middle;margin-left:.5rem"><span></span>{{ app.status | replace('_', ' ') }}</span>
+            </div>
+            <p>{{ app.role or 'Role pending' }} · {{ app.contact_email or 'No contact email on file' }}</p>
+        </div>
+        <a class="period-button" href="/replies">
+            <svg class="icon" style="width:.9rem;height:.9rem;transform:rotate(180deg)"><use href="#i-chevron" /></svg>
+            Back to reply center
+        </a>
+    </div>
+
+    <div class="draft-layout">
+        <div class="card">
+            <div class="card-header" style="padding:0 0 .8rem">
+                <div>
+                    <div class="section-title">Conversation history</div>
+                    <p>Started {{ app.created_at.strftime('%b %d, %Y') if app.created_at else 'recently' }}</p>
+                </div>
+            </div>
+
+            <div class="chat-container" id="chatHistory">
+                {% for msg in history %}
+                <div class="message {{ msg.type }}">
+                    <div class="message-meta">{{ msg.sender }} · {{ msg.time.strftime('%b %d, %H:%M') }}</div>
+                    <div class="message-content">{{ msg.content }}</div>
+                </div>
+                {% else %}
+                <div class="empty-state" style="padding:2rem 0">No messages recorded for this application yet.</div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div>
+            <div class="compose-card" id="replyDraftArea" hidden>
+                <div class="compose-head">
+                    <div>
+                        <span class="stat-icon violet"><svg class="icon"><use href="#i-sparkles" /></svg></span>
+                        <span>
+                            <strong>AI drafted reply</strong>
+                            <small>Review, refine, then send</small>
+                        </span>
+                    </div>
+                    <span class="ai-badge"><svg class="icon" style="width:.8rem;height:.8rem"><use href="#i-sparkles" /></svg> Draft</span>
+                </div>
+
+                <div class="compose-fields">
+                    <label><span>To</span><input id="replyRecipient" value="{{ app.contact_email or '' }}" placeholder="No recipient on file"></label>
+                    <label><span>Subject</span><input id="replySubject" placeholder="RE: Job Application"></label>
+                </div>
+
+                <textarea class="email-editor" id="replyContent" style="min-height:15rem" placeholder="Your reply will appear here…"></textarea>
+
+                <div class="compose-footer">
+                    <span><svg class="icon" style="width:.85rem;height:.85rem"><use href="#i-document" /></svg> Sending from your active account</span>
+                    <div>
+                        <button class="btn btn-secondary" type="button" id="btnDiscardDraft">Discard</button>
+                        <button class="btn btn-primary" type="button" id="btnSendReply"><svg class="icon"><use href="#i-send" /></svg> Send reply</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="instruction-card" id="promptBar" style="margin-top:.9rem;grid-template-columns:auto 1fr auto">
+                <span class="stat-icon blue"><svg class="icon"><use href="#i-sparkles" /></svg></span>
+                <input id="promptInput" placeholder="Ask AI to draft a reply (e.g. 'Confirm availability for Tuesday at 3pm')">
+                <button class="btn btn-primary" type="button" id="btnGenerate">
+                    <svg class="icon"><use href="#i-sparkles" /></svg> Draft with AI
+                </button>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    (function () {
+        var APP_ID = {{ app.id }};
+        var draftArea = ui.qs('#replyDraftArea');
+        var subjectField = ui.qs('#replySubject');
+        var contentField = ui.qs('#replyContent');
+        var promptField = ui.qs('#promptInput');
+        var generateBtn = ui.qs('#btnGenerate');
+        var sendBtn = ui.qs('#btnSendReply');
+
+        var chat = ui.qs('#chatHistory');
+        chat.scrollTop = chat.scrollHeight;
+
+        ui.on(ui.qs('#btnDiscardDraft'), 'click', function () {
+            draftArea.hidden = true;
+            contentField.value = '';
+        });
+
+        ui.on(generateBtn, 'click', async function () {
+            generateBtn.disabled = true;
+            ui.showLoading('AI is reading the history and drafting your reply…', 'Writing reply');
+            try {
+                var data = await ui.postJson('/replies/generate', {
+                    app_id: APP_ID,
+                    instructions: promptField.value.trim()
+                });
+                subjectField.value = data.subject || 'RE: Job Application';
+                contentField.value = data.body || '';
+                draftArea.hidden = false;
+                draftArea.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                ui.toast('Reply drafted');
+            } catch (error) {
+                ui.showStatus('Could not draft reply', error.message, false);
+            } finally {
+                generateBtn.disabled = false;
+                ui.hideLoading();
+            }
+        });
+
+        ui.on(sendBtn, 'click', async function () {
+            var recipient = ui.qs('#replyRecipient').value.trim();
+            var subject = subjectField.value.trim();
+            var content = contentField.value;
+
+            if (!recipient) {
+                ui.showStatus('Missing recipient', 'This application has no contact email on file.', false);
+                return;
+            }
+            if (!content.trim()) {
+                ui.showStatus('Nothing to send', 'Write a message or generate one with AI first.', false);
+                return;
+            }
+
+            sendBtn.disabled = true;
+            ui.showLoading('Delivering your reply…', 'Sending reply');
+            try {
+                await ui.postJson('/emails/send/direct', {
+                    app_id: APP_ID,
+                    recipient: recipient,
+                    subject: subject,
+                    content: content
+                });
+                ui.hideLoading();
+                ui.showStatus('Reply sent', 'Your reply was delivered to ' + recipient + '.');
+                window.setTimeout(function () { window.location.href = '/replies'; }, 1800);
+            } catch (error) {
+                sendBtn.disabled = false;
+                ui.showStatus('Delivery failed', error.message, false);
+            } finally {
+                ui.hideLoading();
+            }
+        });
+    })();
+</script>
+{% endblock %}

@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Set up your profile - Command</title>
+    <link rel="stylesheet" href="/static/style.css?v=3">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+
+<body class="onboarding">
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+        <defs>
+            <symbol id="i-file" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <path d="M14 2v6h6" />
+            </symbol>
+            <symbol id="i-upload" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <path d="M17 8l-5-5-5 5" />
+                <path d="M12 3v12" />
+            </symbol>
+            <symbol id="i-sparkles" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 3l1.9 4.6L18.5 9.5 13.9 11.4 12 16l-1.9-4.6L5.5 9.5 10.1 7.6z" />
+                <path d="M18.5 15.5l.8 1.9 1.9.8-1.9.8-.8 1.9-.8-1.9-1.9-.8 1.9-.8z" />
+            </symbol>
+            <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 6L9 17l-5-5" />
+            </symbol>
+            <symbol id="i-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 12h14" />
+                <path d="M12 5l7 7-7 7" />
+            </symbol>
+        </defs>
+    </svg>
+
+    <div id="toastHost" aria-live="polite"></div>
+
+    <main class="onboarding-shell">
+        <header class="onboarding-hero">
+            <span class="brand-mark">C</span>
+            <div class="eyebrow">Welcome to Command</div>
+            <h1 class="title" role="heading" aria-level="1">Let's build your profile</h1>
+            <p>This information powers every draft, application, and reply the agent writes for you.</p>
+        </header>
+
+        <div class="onboarding-grid">
+            <!-- Resume import -->
+            <section class="card">
+                <div class="panel-title">
+                    <span class="stat-icon violet"><svg class="icon"><use href="#i-sparkles" /></svg></span>
+                    <span>
+                        <strong>AI resume import</strong>
+                        <small>Fastest way to fill this page</small>
+                    </span>
+                </div>
+
+                <p class="description" style="margin:.9rem 0 1.1rem">
+                    Upload your resume PDF and we'll extract your name, contact details, skills, projects,
+                    and work history automatically.
+                </p>
+
+                <div class="drop-zone" id="dropZone" role="button" tabindex="0"
+                    aria-label="Upload resume PDF, or drop a file here">
+                    <span class="stat-icon violet" style="width:2.6rem;height:2.6rem">
+                        <svg class="icon" style="width:1.2rem;height:1.2rem"><use href="#i-upload" /></svg>
+                    </span>
+                    <strong>Drag &amp; drop your resume PDF</strong>
+                    <span class="muted">or click to browse files</span>
+                </div>
+                <input type="file" id="fileInput" accept=".pdf,application/pdf" hidden>
+
+                <div class="process-overlay" id="loadingContainer" hidden style="position:static;background:none">
+                    <div class="spinner" style="width:2rem;height:2rem;border-width:3px"></div>
+                    <strong id="statusMessage">Extracting resume text…</strong>
+                    <p class="muted" style="margin:0;font-size:.68rem">Structuring details with AI. This can take up to 20 seconds.</p>
+                </div>
+            </section>
+
+            <!-- Profile form -->
+            <section class="card">
+                <div class="panel-title">
+                    <span class="stat-icon cyan"><svg class="icon"><use href="#i-file" /></svg></span>
+                    <span>
+                        <strong>Personal details &amp; experience</strong>
+                        <small>Review anything the importer filled in</small>
+                    </span>
+                </div>
+
+                <form id="setupForm" novalidate>
+                    <div class="form-row" style="margin-top:1.2rem">
+                        <div>
+                            <label class="form-label" for="fullName">Full name</label>
+                            <input type="text" id="fullName" placeholder="e.g. John Doe" required>
+                        </div>
+                        <div>
+                            <label class="form-label" for="email">Email address</label>
+                            <input type="email" id="email" placeholder="e.g. john@example.com" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row" style="margin-top:1.1rem">
+                        <div>
+                            <label class="form-label" for="phone">Phone number</label>
+                            <input type="tel" id="phone" placeholder="e.g. +1 (555) 019-2834">
+                        </div>
+                        <div>
+                            <label class="form-label" for="portfolioLinks">Portfolio &amp; social links</label>
+                            <input type="text" id="portfolioLinks" placeholder="LinkedIn: … | GitHub: …">
+                        </div>
+                    </div>
+
+                    <label class="form-label" for="skills" style="margin-top:1.1rem">Key skills</label>
+                    <textarea id="skills" rows="2" placeholder="e.g. Python, FastAPI, JavaScript, React, PostgreSQL" required></textarea>
+
+                    <label class="form-label" for="experience" style="margin-top:1.1rem">Experience summary</label>
+                    <textarea id="experience" rows="4" placeholder="Briefly describe your work history, positions, and roles…" required></textarea>
+
+                    <label class="form-label" for="projects" style="margin-top:1.1rem">Key projects</label>
+                    <textarea id="projects" rows="4" placeholder="List your major projects, the technologies used, and the outcomes…"></textarea>
+
+                    <label class="form-label" for="systemPrompt" style="margin-top:1.1rem">Drafting instructions / persona</label>
+                    <textarea id="systemPrompt" rows="3" placeholder="e.g. 'I'm a final-year student, write from that perspective' or 'Keep the tone conversational and highlight my backend architecture skills.'"></textarea>
+
+                    <button type="submit" class="btn btn-primary" id="submitBtn" style="width:100%;margin-top:1.4rem;justify-content:center">
+                        Save profile &amp; open dashboard
+                        <svg class="icon" style="width:.9rem;height:.9rem"><use href="#i-arrow" /></svg>
+                    </button>
+                </form>
+            </section>
+        </div>
+    </main>
+
+    <script src="/static/app.js?v=3"></script>
+    <script>
+        (function () {
+            var dropZone = ui.qs('#dropZone');
+            var fileInput = ui.qs('#fileInput');
+            var loading = ui.qs('#loadingContainer');
+            var statusMessage = ui.qs('#statusMessage');
+
+            function setLoading(active, message) {
+                loading.hidden = !active;
+                dropZone.hidden = active;
+                if (message) statusMessage.innerText = message;
+            }
+
+            ui.on(dropZone, 'click', function () { fileInput.click(); });
+            ui.on(dropZone, 'keydown', function (event) {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    fileInput.click();
+                }
+            });
+            ui.on(fileInput, 'change', function (event) {
+                if (event.target.files.length) parseResume(event.target.files[0]);
+            });
+
+            ['dragenter', 'dragover'].forEach(function (name) {
+                ui.on(dropZone, name, function (event) {
+                    event.preventDefault();
+                    dropZone.classList.add('dragging');
+                });
+            });
+
+            ['dragleave', 'drop'].forEach(function (name) {
+                ui.on(dropZone, name, function (event) {
+                    event.preventDefault();
+                    dropZone.classList.remove('dragging');
+                });
+            });
+
+            ui.on(dropZone, 'drop', function (event) {
+                var files = event.dataTransfer && event.dataTransfer.files;
+                if (files && files.length) parseResume(files[0]);
+            });
+
+            async function parseResume(file) {
+                if (file.type !== 'application/pdf' && !/\.pdf$/i.test(file.name)) {
+                    ui.toast('Please upload a PDF file.', { error: true });
+                    return;
+                }
+
+                setLoading(true, 'Extracting resume text…');
+
+                var formData = new FormData();
+                formData.append('file', file);
+
+                try {
+                    statusMessage.innerText = 'Structuring details using AI…';
+                    var data = await ui.request('/setup/parse-resume', { method: 'POST', body: formData });
+
+                    ui.qs('#fullName').value = data.full_name || '';
+                    ui.qs('#email').value = data.email || '';
+                    ui.qs('#phone').value = data.phone || '';
+                    ui.qs('#portfolioLinks').value = data.portfolio_links || '';
+                    ui.qs('#skills').value = data.skills || '';
+                    ui.qs('#experience').value = data.experience || '';
+                    ui.qs('#projects').value = data.projects || '';
+
+                    setLoading(false);
+                    ui.toast('Profile fields extracted. Review them before saving.');
+                } catch (error) {
+                    setLoading(false);
+                    ui.toast(error.message, { error: true });
+                }
+            }
+
+            ui.on(ui.qs('#setupForm'), 'submit', async function (event) {
+                event.preventDefault();
+
+                var fullName = ui.qs('#fullName').value.trim();
+                var email = ui.qs('#email').value.trim();
+                var skills = ui.qs('#skills').value.trim();
+                var experience = ui.qs('#experience').value.trim();
+
+                if (!fullName || !email || !skills || !experience) {
+                    ui.toast('Fill in your name, email, skills, and experience to continue.', { error: true });
+                    return;
+                }
+
+                var button = ui.qs('#submitBtn');
+                var original = button.innerHTML;
+                button.disabled = true;
+                button.innerText = 'Saving profile…';
+
+                try {
+                    await ui.postJson('/setup/save', {
+                        full_name: fullName,
+                        email: email,
+                        phone: ui.qs('#phone').value.trim(),
+                        portfolio_links: ui.qs('#portfolioLinks').value.trim(),
+                        skills: skills,
+                        experience: experience,
+                        projects: ui.qs('#projects').value,
+                        system_prompt: ui.qs('#systemPrompt').value
+                    });
+                    window.location.href = '/';
+                } catch (error) {
+                    ui.toast(error.message, { error: true });
+                    button.disabled = false;
+                    button.innerHTML = original;
+                }
+            });
+        })();
+    </script>
+</body>
+
+</html>

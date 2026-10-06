@@ -1,0 +1,12 @@
+Arjun Mehta
+Hiring an LLM Engineer for our agentic AI platform.
+
+Skills:
+- Python, LangGraph
+- Vector databases
+
+Responsibilities:
+- Ship agentic AI workflows
+
+Location: Remote / Work From Home
+Apply: email me at arjun [at] talentbridge [dot] in, or send your CV to hiring@talentbridge.co.in

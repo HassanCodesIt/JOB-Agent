@@ -1,0 +1,92 @@
+<article class="li-job-card"
+         data-batch="{{ item.batch }}"
+         data-subs="{{ item.subs | join(',') }}"
+         data-search="{{ (item.role ~ ' ' ~ item.company ~ ' ' ~ item.location) | e }}">
+    <div class="li-job-head">
+        <div class="li-job-title">
+            <strong>{{ item.role }}</strong>
+            <span>{{ item.company }}</span>
+        </div>
+        <div class="li-job-badges">
+            {% if item.batch == 'email' %}
+            <span class="status-pill blue"><span>With email</span></span>
+            {% else %}
+            <span class="status-pill neutral"><span>No email</span></span>
+            {% endif %}
+            {% if item.filter_status == 'accepted' %}
+            <span class="status-pill status-active"><span>Relevant</span></span>
+            {% elif item.filter_status == 'rejected' %}
+            <span class="status-pill status-rejected"><span>Not relevant</span></span>
+            {% elif item.filter_status == 'error' %}
+            <span class="status-pill status-error"><span>Filter error</span></span>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="li-job-facts">
+        <span><svg class="icon"><use href="#i-user" /></svg> {{ item.location }}</span>
+        {% if item.experience and item.experience != '—' %}
+        <span><svg class="icon"><use href="#i-briefcase" /></svg> {{ item.experience }}</span>
+        {% endif %}
+        {% if item.employment_type and item.employment_type != '—' %}
+        <span>{{ item.employment_type }}</span>
+        {% endif %}
+        {% if item.salary %}<span class="li-fact-accent">{{ item.salary }}</span>{% endif %}
+        {% if item.email %}<span class="li-fact-accent">{{ item.email }}</span>{% endif %}
+        {% if item.has_image %}<span>Image post</span>{% endif %}
+        {% if item.application_method %}<span>{{ item.application_method }}</span>{% endif %}
+    </div>
+
+    {% if item.preview %}
+    <p class="li-job-preview">{{ item.preview }}</p>
+    {% else %}
+    <p class="li-job-preview muted">No job description text was collected for this post.</p>
+    {% endif %}
+
+    {% if item.full_text %}
+    <details class="li-job-details">
+        <summary>Job description</summary>
+        <div class="li-job-details-body">{{ item.full_text }}</div>
+    </details>
+    {% endif %}
+
+    {% if item.filter_error %}
+    <div class="li-job-filter-error">{{ item.filter_error }}</div>
+    {% endif %}
+
+    <div class="li-job-actions">
+        {% if item.links.post %}
+        <a class="btn btn-secondary btn-sm" href="{{ item.links.post }}" target="_blank" rel="noopener noreferrer">
+            <svg class="icon"><use href="#i-link" /></svg> View LinkedIn Post
+        </a>
+        {% endif %}
+        {% if item.links.job %}
+        <a class="btn btn-secondary btn-sm" href="{{ item.links.job }}" target="_blank" rel="noopener noreferrer">
+            <svg class="icon"><use href="#i-eye" /></svg> View Job
+        </a>
+        {% endif %}
+        {% if item.links.apply %}
+        <a class="btn btn-secondary btn-sm" href="{{ item.links.apply }}" target="_blank" rel="noopener noreferrer">
+            <svg class="icon"><use href="#i-send" /></svg> Open Apply Link
+        </a>
+        {% endif %}
+        {% if item.links.image %}
+        <a class="btn btn-secondary btn-sm" href="{{ item.links.image }}" target="_blank" rel="noopener noreferrer">
+            <svg class="icon"><use href="#i-eye" /></svg> View Job Image
+        </a>
+        {% endif %}
+        {% for extra in item.links.extra_apply[:2] %}
+        <a class="btn btn-secondary btn-sm" href="{{ extra }}" target="_blank" rel="noopener noreferrer">
+            <svg class="icon"><use href="#i-send" /></svg> Open Apply Link
+        </a>
+        {% endfor %}
+        {% if item.show_draft %}
+        <button class="btn btn-primary btn-sm js-draft-apply" type="button" data-id="{{ item.id }}">
+            <svg class="icon"><use href="#i-sparkles" /></svg> Draft &amp; Apply
+        </button>
+        {% endif %}
+        {% if item.application_id %}
+        <a class="btn btn-ghost btn-sm" href="/drafts">Open in Drafts</a>
+        {% endif %}
+    </div>
+</article>

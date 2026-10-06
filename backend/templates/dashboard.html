@@ -1,0 +1,333 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Command{% endblock %}
+
+{% block content %}
+{% set total = applications_total %}
+{% set success_rate = ((positive_count / total) * 100) | round(1) if total else 0 %}
+{% set peak = (weekly_counts | max) if weekly_counts and (weekly_counts | max) > 0 else 1 %}
+{% set first_name = display_name.split(' ')[0] %}
+{% set hour = now.hour %}
+{% set greeting = 'Good morning' if hour < 12 else ('Good afternoon' if hour < 18 else 'Good evening') %}
+{% set tones = ['violet', 'blue', 'coral', 'green'] %}
+
+<section class="page-heading">
+    <div>
+        <div class="eyebrow">{{ now.strftime('%A, %B %d') | upper }}</div>
+        <div class="title" role="heading" aria-level="1">{{ greeting }}, {{ first_name }}</div>
+        <p>Here's how your job search is moving today.</p>
+    </div>
+    <a class="period-button" href="/sent">Last 30 days
+        <svg class="icon" style="width:.9rem;height:.9rem"><use href="#i-chevron" /></svg>
+    </a>
+</section>
+
+<section class="li-dashboard-cta">
+    <span class="li-cta-icon"><svg class="icon"><use href="#i-search" /></svg></span>
+    <span class="li-cta-copy">
+        <strong>Find Jobs on LinkedIn</strong>
+        <small>Search your LinkedIn session, filter the relevant posts, then draft them here.</small>
+    </span>
+    <a class="btn btn-primary" href="/linkedin-jobs">
+        Open LinkedIn Job Finder
+        <svg class="icon" style="width:.9rem;height:.9rem"><use href="#i-arrow" /></svg>
+    </a>
+</section>
+
+<section class="stats-grid" aria-label="Application overview">
+    <article class="stat-card featured">
+        <div class="stat-top">
+            <span class="stat-icon violet"><svg class="icon"><use href="#i-briefcase" /></svg></span>
+            <span class="trend positive">{{ weekly_applications }} this week</span>
+        </div>
+        <div class="stat-value">{{ total }}</div>
+        <div class="stat-label">Total applications</div>
+        <div class="sparkline" aria-hidden="true">
+            {% for count in weekly_counts %}
+            <span style="height: {{ ((count / peak) * 100) | round(0, 'floor') | int }}%"></span>
+            {% endfor %}
+        </div>
+    </article>
+
+    <article class="stat-card">
+        <div class="stat-top">
+            <span class="stat-icon orange"><svg class="icon"><use href="#i-clock" /></svg></span>
+            <span class="trend">{{ ((awaiting_count / total) * 100) | round(1) if total else 0 }}% of total</span>
+        </div>
+        <div class="stat-value orange-text">{{ awaiting_count }}</div>
+        <div class="stat-label">Awaiting response</div>
+        <div class="stat-note"><span class="dot orange-dot"></span> {{ weekly_updated }} updated this week</div>
+    </article>
+
+    <article class="stat-card">
+        <div class="stat-top">
+            <span class="stat-icon blue"><svg class="icon"><use href="#i-document" /></svg></span>
+            <span class="trend positive">{{ nav_draft_count }} total</span>
+        </div>
+        <div class="stat-value blue-text">{{ nav_draft_count }}</div>
+        <div class="stat-label">Drafts ready</div>
+        <a class="stat-link" href="/drafts">Review drafts
+            <svg class="icon" style="width:.85rem;height:.85rem"><use href="#i-arrow" /></svg>
+        </a>
+    </article>
+
+    <article class="stat-card">
+        <div class="stat-top">
+            <span class="stat-icon green"><svg class="icon"><use href="#i-target" /></svg></span>
+            <span class="trend positive">{{ positive_count }} shortlisted</span>
+        </div>
+        <div class="stat-value green-text">{{ success_rate }}%</div>
+        <div class="stat-label">Success rate</div>
+        <div class="stat-note"><span class="dot green-dot"></span>
+            {% if positive_count %}Keep the momentum going{% else %}First reply changes everything{% endif %}
+        </div>
+    </article>
+</section>
+
+<section class="dashboard-grid">
+    <div class="applications-card">
+        <div class="card-header">
+            <div>
+                <div class="section-title" role="heading" aria-level="2">Recent applications</div>
+                <p>Your latest outreach and activity</p>
+            </div>
+            <a class="view-all" href="/sent">View all {{ total }}
+                <svg class="icon" style="width:.9rem;height:.9rem"><use href="#i-arrow" /></svg>
+            </a>
+        </div>
+
+        <div class="table-head">
+            <span>Company &amp; role</span>
+            <span>Status</span>
+            <span>Last activity</span>
+            <span></span>
+        </div>
+
+        <div class="application-list" id="applicationList">
+            {% for item in applications %}
+            {% include "partials/application_row.html" %}
+            {% else %}
+            <div class="empty-state">
+                <svg class="icon"><use href="#i-inbox" /></svg>
+                <div>No applications yet.</div>
+                <p class="muted" style="margin:.4rem 0 1rem">Start by pasting a job poster, uploading an image, or dropping in a link.</p>
+                <a class="btn btn-primary" href="/apply"><svg class="icon"><use href="#i-plus" /></svg> Add your first application</a>
+            </div>
+            {% endfor %}
+        </div>
+
+        {% if total > applications | length %}
+        <div class="list-footer" id="loadMoreFooter">
+            <button class="btn btn-secondary" type="button" id="btnLoadMore" data-offset="{{ applications | length }}">
+                <svg class="icon" style="width:.95rem;height:.95rem"><use href="#i-chevron" /></svg>
+                Load more
+            </button>
+            <span class="muted" id="loadMoreCount">Showing {{ applications | length }} of {{ total }}</span>
+        </div>
+        {% endif %}
+    </div>
+
+    <aside class="insights-card">
+        <div class="insights-heading">
+            <span class="stat-icon violet"><svg class="icon"><use href="#i-sparkles" /></svg></span>
+            <span>
+                <strong>Smart insights</strong>
+                <small>Updated just now</small>
+            </span>
+        </div>
+
+        <div class="insight-chart">
+            <div class="chart-ring" style="background:
+                    radial-gradient(circle at center, var(--surface) 58%, transparent 60%),
+                    conic-gradient(var(--violet) 0 {{ success_rate }}%, var(--cyan) {{ success_rate }}% {{ ((success_rate + 14) if success_rate < 86 else 100) }}%, rgba(255,255,255,.06) {{ ((success_rate + 14) if success_rate < 86 else 100) }}%)">
+                <span>{{ weekly_applications }}</span>
+                <small>this week</small>
+            </div>
+        </div>
+
+        <div class="insight-title">
+            {% if weekly_applications >= 5 %}You're building momentum
+            {% elif weekly_applications > 0 %}You're off to a good start
+            {% else %}Time to launch your first one{% endif %}
+        </div>
+        <p>
+            {% if weekly_applications %}
+            You sent {{ weekly_applications }} application{{ '' if weekly_applications == 1 else 's' }} in the last 7 days.
+            Keep a steady rhythm to protect your weekly target of 15.
+            {% else %}
+            Nothing sent in the last 7 days. Pasting a job poster takes under a minute and gets you a tailored draft.
+            {% endif %}
+        </p>
+
+        <div class="insight-metric">
+            <span><span class="metric-dot purple"></span> Applications</span>
+            <strong>{{ weekly_applications }}</strong>
+        </div>
+        <div class="insight-metric">
+            <span><span class="metric-dot cyan"></span> Shortlisted</span>
+            <strong>{{ positive_count }}</strong>
+        </div>
+        <div class="insight-metric">
+            <span><span class="metric-dot green"></span> Drafts waiting</span>
+            <strong>{{ nav_draft_count }}</strong>
+        </div>
+
+        <a class="insight-button" href="/replies">Explore replies
+            <svg class="icon" style="width:.9rem;height:.9rem"><use href="#i-arrow" /></svg>
+        </a>
+    </aside>
+</section>
+
+<!-- Content viewer -->
+<div class="modal" id="viewerModal">
+    <div class="modal-content">
+        <span class="close-btn" data-close-viewer>&times;</span>
+        <h2 id="viewerTitle">Content viewer</h2>
+        <div class="email-body" id="viewerContent" style="min-height:12rem"></div>
+        <div class="modal-actions">
+            <button class="btn btn-secondary" data-close-viewer>Close</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    var viewerModal = ui.qs('#viewerModal');
+
+    function openViewer(title, content) {
+        ui.qs('#viewerTitle').innerText = title;
+        ui.qs('#viewerContent').innerText = content;
+        viewerModal.classList.add('active');
+    }
+
+    ui.qsa('[data-close-viewer]').forEach(function (button) {
+        ui.on(button, 'click', function () { viewerModal.classList.remove('active'); });
+    });
+
+    function setViewerBusy(isBusy) {
+        ui.qs('#viewerContent').innerText = isBusy ? 'Loading…' : '';
+    }
+
+    function bindRowActions(scope) {
+        var root = scope || document;
+
+        ui.qsa('.js-view-source', root).forEach(function (button) {
+            ui.on(button, 'click', async function () {
+                button.disabled = true;
+                setViewerBusy(true);
+                viewerModal.classList.add('active');
+                ui.qs('#viewerTitle').innerText = 'Original job details';
+                try {
+                    var data = await ui.request('/api/applications/' + button.getAttribute('data-id') + '/source');
+                    openViewer(button.getAttribute('data-label'), data.ocr_text || 'No stored job description for this application.');
+                } catch (error) {
+                    openViewer('Source unavailable', error.message);
+                } finally {
+                    button.disabled = false;
+                }
+            });
+        });
+
+        ui.qsa('.js-view-email', root).forEach(function (button) {
+            ui.on(button, 'click', async function () {
+                button.disabled = true;
+                setViewerBusy(true);
+                viewerModal.classList.add('active');
+                ui.qs('#viewerTitle').innerText = 'Last email sent';
+                try {
+                    var data = await ui.request('/api/applications/' + button.getAttribute('data-id') + '/last-email');
+                    openViewer(data.subject || 'Last email sent', data.body || '');
+                } catch (error) {
+                    openViewer('Email unavailable', error.message);
+                } finally {
+                    button.disabled = false;
+                }
+            });
+        });
+
+        ui.qsa('.js-delete-app', root).forEach(function (button) {
+            ui.on(button, 'click', async function () {
+                var id = button.getAttribute('data-id');
+                var company = button.getAttribute('data-company');
+                var confirmed = await ui.confirm({
+                    title: 'Delete this application?',
+                    message: 'All drafts, emails and history tied to ' + company + ' will be permanently removed.',
+                    confirmText: 'Delete record'
+                });
+                if (!confirmed) return;
+
+                button.disabled = true;
+                try {
+                    await ui.request('/applications/' + id, { method: 'DELETE' });
+                    var row = button.closest('.application-row');
+                    row.style.opacity = '0';
+                    row.style.pointerEvents = 'none';
+                    window.setTimeout(function () {
+                        row.remove();
+                        bumpLoadedTotal(-1);
+                    }, 250);
+                    ui.toast('Application deleted');
+                } catch (error) {
+                    button.disabled = false;
+                    ui.showStatus('Delete failed', error.message, false);
+                }
+            });
+        });
+    }
+
+    bindRowActions();
+
+    // Paged "load more" — the server renders the extra rows so markup stays in one place.
+    var loadedTotal = {{ applications_total }};
+
+    function bumpLoadedTotal(delta) {
+        loadedTotal += delta;
+        updateLoadMoreCount();
+    }
+
+    function updateLoadMoreCount() {
+        var node = ui.qs('#loadMoreCount');
+        if (node) node.innerText = 'Showing ' + loadedTotal + ' of ' + {{ applications_total }};
+    }
+
+    var loadMoreButton = ui.qs('#btnLoadMore');
+
+    ui.on(loadMoreButton, 'click', async function () {
+        var button = loadMoreButton;
+        var offset = parseInt(button.getAttribute('data-offset'), 10) || 0;
+        var original = button.innerHTML;
+
+        button.disabled = true;
+        button.innerText = 'Loading…';
+
+        try {
+            var data = await ui.request('/api/applications?limit={{ applications_page_size }}&offset=' + offset);
+            if (!data.count) return;
+
+            // Bind only the freshly parsed nodes so existing rows keep a single handler.
+            var fragment = document.createElement('template');
+            fragment.innerHTML = data.html;
+            bindRowActions(fragment.content);
+            ui.qs('#applicationList').appendChild(fragment.content);
+
+            offset += data.count;
+            loadedTotal = offset;
+            button.setAttribute('data-offset', offset);
+            updateLoadMoreCount();
+
+            if (!data.has_more) {
+                var footer = ui.qs('#loadMoreFooter');
+                if (footer) footer.remove();
+            }
+        } catch (error) {
+            ui.showStatus('Could not load more', error.message, false);
+        } finally {
+            if (button.isConnected) {
+                button.disabled = false;
+                button.innerHTML = original;
+            }
+        }
+    });
+</script>
+{% endblock %}

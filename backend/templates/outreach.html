@@ -1,0 +1,349 @@
+{% extends "base.html" %}
+
+{% block title %}Outreach - Command{% endblock %}
+
+{% block content %}
+{% set status_tone = {'active': 'green', 'paused': 'orange', 'completed': 'violet', 'error': 'coral'} %}
+
+<section class="inner-page">
+    <div class="inner-page-heading">
+        <div>
+            <div class="eyebrow">Outreach</div>
+            <div class="title" role="heading" aria-level="1">Build meaningful connections</div>
+            <p>Create personalized outreach sequences for the companies you care about.</p>
+        </div>
+        <button class="btn btn-primary" type="button" data-open-campaign>
+            <svg class="icon"><use href="#i-plus" /></svg> New campaign
+        </button>
+    </div>
+
+    <div class="stat-strip">
+        <div class="mini-stat">
+            <strong class="green-text">{{ sent_today }}</strong>
+            <span>Sent today</span>
+        </div>
+        <div class="mini-stat">
+            <strong>{{ campaigns | length }}</strong>
+            <span>Total campaigns</span>
+        </div>
+        <div class="mini-stat">
+            <strong class="green-text">{{ campaigns | selectattr('status', 'equalto', 'active') | list | length }}</strong>
+            <span>Running now</span>
+        </div>
+        <div class="mini-stat">
+            <strong class="orange-text">{{ campaigns | selectattr('status', 'equalto', 'paused') | list | length }}</strong>
+            <span>Paused</span>
+        </div>
+    </div>
+
+    {% if campaigns %}
+    <div class="stack">
+        {% for c in campaigns %}
+        <div class="campaign-card" id="campaign-{{ c.id }}" data-campaign-id="{{ c.id }}"
+            data-status="{{ c.status }}" data-search="{{ c.name }} {{ c.status }}">
+            <div class="row-between" style="align-items:flex-start">
+                <div>
+                    <div class="section-title">{{ c.name }}</div>
+                    <p class="muted" style="margin:.25rem 0 0;font-size:.62rem">
+                        Created {{ c.created_at.strftime('%b %d, %Y') }}
+                    </p>
+                </div>
+                <div style="text-align:right">
+                    <div style="font-size:1.15rem;font-weight:800">
+                        <span id="sent-{{ c.id }}">{{ c.sent_count }}</span>
+                        <span class="muted" style="font-weight:600">/</span>
+                        <span id="total-{{ c.id }}">{{ c.total_count }}</span>
+                    </div>
+                    <div class="muted" style="font-size:.6rem">emails sent</div>
+                </div>
+            </div>
+
+            <div class="progress-track" style="height:.4rem;margin-top:.9rem">
+                <span id="prog-{{ c.id }}"
+                    style="width: {{ (c.sent_count / c.total_count * 100) if c.total_count > 0 else 0 }}%;background:{{ {'active': 'linear-gradient(90deg,var(--violet),var(--cyan))', 'paused': 'var(--orange)', 'completed': 'linear-gradient(90deg,#45dfa8,var(--green))', 'error': 'var(--danger)'}.get(c.status, 'var(--violet)') }}"></span>
+            </div>
+            <div class="row-between" style="margin-top:.5rem">
+                <span class="status-pill status-{{ 'positive_response' if c.status == 'completed' else ('awaiting_response' if c.status == 'paused' else ('rejected' if c.status == 'error' else 'draft')) }}">
+                    <span></span>{{ c.status }}
+                </span>
+                <span class="muted" style="font-size:.6rem"><span id="pct-{{ c.id }}">{{ ((c.sent_count / c.total_count * 100) | round(1)) if c.total_count > 0 else 0 }}%</span> completed</span>
+            </div>
+
+            <div class="row" style="margin-top:1rem;flex-wrap:wrap">
+                {% if c.total_count == 0 and c.status == 'completed' %}
+                <button class="btn btn-primary btn-sm" data-action="retry" data-id="{{ c.id }}">
+                    <svg class="icon" style="width:.9rem;height:.9rem"><use href="#i-refresh" /></svg> Retry
+                </button>
+                {% endif %}
+
+                {% if c.status == 'completed' and c.sent_count < c.total_count %}
+                <button class="btn btn-primary btn-sm" data-action="retry_failed" data-id="{{ c.id }}">
+                    <svg class="icon" style="width:.9rem;height:.9rem"><use href="#i-refresh" /></svg> Retry failed
+                </button>
+                {% endif %}
+
+                {% if c.status == 'active' %}
+                <button class="btn btn-secondary btn-sm" data-action="pause" data-id="{{ c.id }}">
+                    <svg class="icon" style="width:.9rem;height:.9rem"><use href="#i-clock" /></svg> Pause
+                </button>
+                {% elif c.status == 'paused' %}
+                <button class="btn btn-primary btn-sm" data-action="resume" data-id="{{ c.id }}">
+                    <svg class="icon" style="width:.9rem;height:.9rem"><use href="#i-send" /></svg> Resume
+                </button>
+                {% endif %}
+
+                <a class="btn btn-secondary btn-sm" href="{{ c.sheet_url }}" target="_blank" rel="noopener">
+                    <svg class="icon" style="width:.9rem;height:.9rem"><use href="#i-document" /></svg> Sheet
+                </a>
+                <button class="btn btn-secondary btn-sm" data-details="{{ c.id }}" data-name="{{ c.name }}">
+                    <svg class="icon" style="width:.9rem;height:.9rem"><use href="#i-search" /></svg> Details
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-workspace">
+        <span class="empty-icon"><svg class="icon"><use href="#i-send" /></svg></span>
+        <div class="section-title">No campaigns yet</div>
+        <p>Connect a published Google Sheet of contacts and the agent will send personalized outreach for you.</p>
+        <button class="btn btn-primary" type="button" data-open-campaign>Start outreach
+            <svg class="icon" style="width:.9rem;height:.9rem"><use href="#i-arrow" /></svg>
+        </button>
+    </div>
+    {% endif %}
+</section>
+
+<!-- New campaign -->
+<div class="modal" id="newCampaignModal">
+    <div class="modal-content">
+        <span class="close-btn" data-close-campaign>&times;</span>
+        <div class="modal-icon violet"><svg class="icon"><use href="#i-send" /></svg></div>
+        <h2>New outreach campaign</h2>
+        <p>The sheet must be published to the web (File &gt; Share &gt; Publish to web &gt; CSV) so the agent can read it.</p>
+
+        <label for="cName">Campaign name</label>
+        <input type="text" id="cName" placeholder="e.g. HRs list Feb 2026">
+
+        <label for="cUrl">Google Sheet URL</label>
+        <input type="url" id="cUrl" placeholder="https://docs.google.com/spreadsheets/d/...">
+
+        <label for="cHeader">Header row number</label>
+        <input type="number" id="cHeader" value="1" min="1">
+        <p class="form-help">The row where your column names (Name, Email, …) live.</p>
+
+        <label for="cContext1">Target role / vacancy</label>
+        <input type="text" id="cContext1" placeholder="e.g. Senior Python Developer">
+
+        <label for="cContext2">Additional instructions (optional)</label>
+        <textarea id="cContext2" rows="2" placeholder="e.g. Mention my 5 years of experience."></textarea>
+
+        <label for="cDailyLimit">Daily limit (optional)</label>
+        <input type="number" id="cDailyLimit" placeholder="e.g. 30" min="1">
+        <p class="form-help">Maximum emails sent per day. Leave empty for unlimited.</p>
+
+        <div class="modal-actions">
+            <button class="btn btn-secondary" data-close-campaign>Cancel</button>
+            <button class="btn btn-primary" id="btnStartCampaign">Start campaign</button>
+        </div>
+    </div>
+</div>
+
+<!-- Campaign details -->
+<div class="modal" id="detailsModal">
+    <div class="modal-content" style="width:min(48rem,100%)">
+        <span class="close-btn" data-close-details>&times;</span>
+        <h2 id="detailsTitle">Campaign details</h2>
+        <div id="detailsLoading" class="muted" style="padding:1.5rem 0;text-align:center;font-size:.7rem">Loading…</div>
+        <div class="table-container" id="detailsTableWrap" hidden>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Recipient</th>
+                        <th>Company</th>
+                        <th>Status</th>
+                        <th>Sent at</th>
+                    </tr>
+                </thead>
+                <tbody id="detailsBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    (function () {
+        var campaignModal = ui.qs('#newCampaignModal');
+        var detailsModal = ui.qs('#detailsModal');
+
+        ui.qsa('[data-open-campaign]').forEach(function (button) {
+            ui.on(button, 'click', function () { campaignModal.classList.add('active'); });
+        });
+        ui.qsa('[data-close-campaign]').forEach(function (button) {
+            ui.on(button, 'click', function () { campaignModal.classList.remove('active'); });
+        });
+        ui.qsa('[data-close-details]').forEach(function (button) {
+            ui.on(button, 'click', function () { detailsModal.classList.remove('active'); });
+        });
+
+        ui.on(ui.qs('#btnStartCampaign'), 'click', async function (event) {
+            var name = ui.qs('#cName').value.trim();
+            var url = ui.qs('#cUrl').value.trim();
+
+            if (!name || !url) {
+                ui.showStatus('Missing details', 'A campaign needs both a name and a sheet URL.', false);
+                return;
+            }
+
+            var button = event.currentTarget;
+            var original = button.innerHTML;
+            button.disabled = true;
+            button.innerText = 'Starting…';
+
+            var payload = {
+                name: name,
+                sheet_url: url,
+                header_row: parseInt(ui.qs('#cHeader').value, 10) || 1,
+                context1: ui.qs('#cContext1').value.trim(),
+                context2: ui.qs('#cContext2').value.trim()
+            };
+
+            var dailyLimit = parseInt(ui.qs('#cDailyLimit').value, 10);
+            if (dailyLimit > 0) payload.daily_limit = dailyLimit;
+
+            try {
+                await ui.postJson('/campaigns/start', payload);
+                window.location.reload();
+            } catch (error) {
+                button.disabled = false;
+                button.innerHTML = original;
+                ui.showStatus('Campaign failed to start', error.message, false);
+            }
+        });
+
+        ui.qsa('[data-action]').forEach(function (button) {
+            ui.on(button, 'click', async function () {
+                var action = button.getAttribute('data-action');
+                var id = button.getAttribute('data-id');
+                var options = { headers: {}, body: undefined };
+
+                if (action === 'retry') {
+                    var headerRow = await ui.prompt({
+                        title: 'Retry campaign',
+                        message: 'Enter the header row number if the sheet layout changed. Leave blank to reuse the existing value.',
+                        placeholder: 'e.g. 7'
+                    });
+                    if (headerRow === null) return;
+                    if (headerRow) {
+                        options.headers = { 'Content-Type': 'application/json' };
+                        options.body = JSON.stringify({ header_row: headerRow });
+                    }
+                }
+
+                var original = button.innerHTML;
+                button.disabled = true;
+                button.innerText = 'Working…';
+
+                try {
+                    await ui.request('/campaigns/' + id + '/' + action, {
+                        method: 'POST',
+                        headers: options.headers,
+                        body: options.body
+                    });
+                    window.location.reload();
+                } catch (error) {
+                    button.disabled = false;
+                    button.innerHTML = original;
+                    ui.showStatus('Action failed', error.message, false);
+                }
+            });
+        });
+
+        ui.qsa('[data-details]').forEach(function (button) {
+            ui.on(button, 'click', async function () {
+                var id = button.getAttribute('data-details');
+                ui.qs('#detailsTitle').innerText = button.getAttribute('data-name');
+                ui.qs('#detailsLoading').hidden = false;
+                ui.qs('#detailsTableWrap').hidden = true;
+                ui.qs('#detailsBody').innerHTML = '';
+                detailsModal.classList.add('active');
+
+                try {
+                    var items = await ui.request('/campaigns/' + id + '/items');
+                    ui.qs('#detailsLoading').hidden = true;
+                    ui.qs('#detailsTableWrap').hidden = false;
+
+                    if (!items.length) {
+                        ui.qs('#detailsBody').innerHTML =
+                            '<tr><td colspan="4" style="text-align:center;padding:2rem;color:var(--text-muted)">No recipients found in this sheet.</td></tr>';
+                        return;
+                    }
+
+                    var LIMIT = 200;
+                    var shown = items.slice(0, LIMIT);
+
+                    if (items.length > LIMIT) {
+                        shown.push({ __note: 'Showing the first ' + LIMIT + ' of ' + items.length + ' recipients. Open the Sheet for the full list.' });
+                    }
+
+                    ui.qs('#detailsBody').innerHTML = shown.map(function (item) {
+                        if (item.__note) {
+                            return '<tr><td colspan="4" style="text-align:center;padding:1rem;color:var(--text-muted);font-size:.6rem">' +
+                                ui.escapeHtml(item.__note) + '</td></tr>';
+                        }
+                        var tone = item.status === 'sent' ? 'green-text'
+                            : item.status === 'error' ? 'orange-text'
+                                : 'muted';
+                        var error = item.error_msg
+                            ? '<div style="color:var(--danger);font-size:.58rem">' + ui.escapeHtml(item.error_msg) + '</div>'
+                            : '';
+                        var sentAt = item.sent_at ? new Date(item.sent_at).toLocaleString() : '—';
+                        return '<tr>' +
+                            '<td><strong>' + ui.escapeHtml(item.recipient_name || 'Unknown') + '</strong>' +
+                            '<div class="muted" style="font-size:.58rem">' + ui.escapeHtml(item.recipient_email || '') + '</div></td>' +
+                            '<td>' + ui.escapeHtml(item.company || '—') + '</td>' +
+                            '<td><span class="' + tone + '" style="font-size:.6rem;font-weight:800">' + ui.escapeHtml((item.status || '').toUpperCase()) + '</span>' + error + '</td>' +
+                            '<td class="muted">' + ui.escapeHtml(sentAt) + '</td>' +
+                            '</tr>';
+                    }).join('');
+                } catch (error) {
+                    ui.qs('#detailsLoading').textContent = error.message;
+                }
+            });
+        });
+
+        // Keep running campaigns in sync without a full reload.
+        window.setInterval(async function () {
+            var cards = ui.qsa('.campaign-card[data-status="active"], .campaign-card[data-status="paused"]');
+
+            for (var index = 0; index < cards.length; index++) {
+                var card = cards[index];
+                var id = card.getAttribute('data-campaign-id');
+
+                try {
+                    var data = await ui.request('/campaigns/' + id);
+                    var total = Number(data.total) || 0;
+                    var sent = Number(data.sent) || 0;
+                    var pct = total > 0 ? (sent / total) * 100 : 0;
+
+                    var sentNode = ui.qs('#sent-' + id);
+                    var totalNode = ui.qs('#total-' + id);
+                    var barNode = ui.qs('#prog-' + id);
+                    var pctNode = ui.qs('#pct-' + id);
+
+                    if (sentNode) sentNode.innerText = sent;
+                    if (totalNode) totalNode.innerText = total;
+                    if (barNode) barNode.style.width = pct + '%';
+                    if (pctNode) pctNode.innerText = pct.toFixed(1) + '%';
+
+                    if (data.status !== card.getAttribute('data-status')) window.location.reload();
+                } catch (error) {
+                    // Transient network hiccup: try again on the next tick.
+                }
+            }
+        }, 5000);
+    })();
+</script>
+{% endblock %}

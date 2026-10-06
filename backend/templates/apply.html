@@ -1,0 +1,359 @@
+{% extends "base.html" %}
+
+{% block title %}Launch application - Command{% endblock %}
+
+{% block content %}
+{% set tones = ['violet', 'blue'] %}
+
+<section class="inner-page">
+    <div class="inner-page-heading">
+        <div>
+            <div class="eyebrow">AI application assistant</div>
+            <div class="title" role="heading" aria-level="1">Launch an application</div>
+            <p>Turn job details into a thoughtful, tailored application.</p>
+        </div>
+        <div class="step-indicator" aria-label="Three step process">
+            <span class="done">1</span><i></i><span>2</span><i></i><span>3</span>
+        </div>
+    </div>
+
+    <div class="launch-grid">
+        <div class="launch-main">
+            <div class="quick-start-card">
+                <div class="quick-title">
+                    <span class="stat-icon violet"><svg class="icon"><use href="#i-sparkles" /></svg></span>
+                    <span>
+                        <strong>Quick start</strong>
+                        <small>Paste job details</small>
+                    </span>
+                </div>
+                <p>Copy the job description, requirements, and recruiter details. We'll prepare a tailored first draft.</p>
+
+                <textarea id="jobText" placeholder="Paste job details, requirements, and contact information here..."></textarea>
+
+                <label class="check-row" for="suggestResumeChange">
+                    <input type="checkbox" id="suggestResumeChange">
+                    <span>
+                        <strong>Match the best resume</strong>
+                        <small>We'll check your <a href="/resumes">resume library</a> for a role-specific resume that fits this job.</small>
+                    </span>
+                </label>
+
+                <button class="btn btn-primary process-button" type="button" id="btnProcess">
+                    <svg class="icon"><use href="#i-sparkles" /></svg> Process &amp; write draft
+                </button>
+            </div>
+
+            <div class="instruction-card">
+                <span class="stat-icon blue"><svg class="icon"><use href="#i-document" /></svg></span>
+                <div>
+                    <strong>One-time instructions</strong>
+                    <small>Optional guidance used only for this draft</small>
+                </div>
+                <input id="applicationInstructions" placeholder="Make it warmer, mention Python automation, keep it concise...">
+            </div>
+
+            <div class="source-grid">
+                <button type="button" id="btnPastePoster">
+                    <span class="stat-icon orange"><svg class="icon"><use href="#i-document" /></svg></span>
+                    <strong>Paste a job poster</strong>
+                    <small>Click, then paste a screenshot</small>
+                    <svg class="icon" style="width:.9rem;height:.9rem"><use href="#i-arrow" /></svg>
+                </button>
+
+                <button type="button" id="btnUploadPoster">
+                    <span class="stat-icon green"><svg class="icon"><use href="#i-upload" /></svg></span>
+                    <strong>Upload a poster</strong>
+                    <small>Choose a JPG or PNG file</small>
+                    <svg class="icon" style="width:.9rem;height:.9rem"><use href="#i-arrow" /></svg>
+                </button>
+
+                <button type="button" id="btnStartLink">
+                    <span class="stat-icon blue"><svg class="icon"><use href="#i-link" /></svg></span>
+                    <strong>Start with a link</strong>
+                    <small>Import a job from a public URL</small>
+                    <svg class="icon" style="width:.9rem;height:.9rem"><use href="#i-arrow" /></svg>
+                </button>
+            </div>
+        </div>
+
+        <aside class="recent-drafts">
+            <div class="section-title">Recent drafts</div>
+            <p>Continue where you left off</p>
+
+            {% if recent_drafts %}
+            {% for draft, app in recent_drafts[:6] %}
+            <a class="draft-row" href="/drafts"
+                data-search="{{ app.company_name or '' }} {{ app.role or '' }}"
+                title="{{ (draft.content or '')[:120] }}">
+                <span class="company-logo {{ tones[loop.index0 % 2] }}">{{ (app.company_name or 'NA')[:2] | upper }}</span>
+                <span>
+                    <strong>{{ app.company_name or 'In research' }}</strong>
+                    <small>{{ app.role or draft.subject or 'AI application draft' }}</small>
+                </span>
+                <svg class="icon" style="width:.9rem;height:.9rem"><use href="#i-chevron" /></svg>
+            </a>
+            {% endfor %}
+            <a class="btn btn-secondary" href="/drafts" style="width:100%;margin-top:.8rem">View all drafts</a>
+            {% else %}
+            <div class="empty-state" style="padding:1.5rem 0.5rem">
+                <svg class="icon"><use href="#i-document" /></svg>
+                <p class="muted" style="margin:.5rem 0 0">Your drafts will appear here once you launch an application.</p>
+            </div>
+            {% endif %}
+        </aside>
+    </div>
+</section>
+
+<!-- Hidden file input for poster uploads -->
+<input type="file" id="posterFile" accept="image/png,image/jpeg" hidden>
+<div class="modal" id="posterPreviewModal">
+    <div class="modal-content centered">
+        <span class="close-btn" data-close-poster>&times;</span>
+        <div class="modal-icon violet"><svg class="icon"><use href="#i-document" /></svg></div>
+        <h2>Paste your job poster</h2>
+        <p>Copy the screenshot, then press Ctrl+V (Cmd+V on Mac) while this box is focused.</p>
+        <div class="paste-zone" id="pasteArea" tabindex="0" style="min-height:11rem">
+            <span id="pasteHint">Click here, then paste</span>
+            <img id="pastedPreview" alt="Pasted job poster preview" hidden>
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-secondary" data-close-poster>Cancel</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    (function () {
+        function getInstructions() {
+            return ui.qs('#applicationInstructions').value.trim();
+        }
+
+        function delay(ms) {
+            return new Promise(function (resolve) { window.setTimeout(resolve, ms); });
+        }
+
+        async function waitForDraft(appId) {
+            for (var attempt = 0; attempt < 24; attempt++) {
+                var response = await fetch('/applications/' + appId + '/draft/');
+                if (response.ok) return response.json();
+                await delay(2500);
+            }
+            throw new Error('The draft is still processing. Check the draft studio in a moment.');
+        }
+
+        async function handleApplicationStarted(response) {
+            var app = await response.json();
+            ui.showLoading('Reading job details and writing the email draft…', 'Working your magic');
+            await delay(700);
+            await waitForDraft(app.id);
+            ui.showLoading('Draft created. Opening the draft studio…', 'Almost there');
+            await delay(500);
+            window.location.href = '/drafts';
+        }
+
+        async function updateHfToken(token) {
+            try {
+                await ui.postJson('/user/hf_token/', { token: token });
+                return true;
+            } catch (error) {
+                return false;
+            }
+        }
+
+        async function withOcrRecovery(response, retry) {
+            if (response.status === 401) {
+                ui.hideLoading();
+                var token = await ui.prompt({
+                    title: 'OCR token needed',
+                    message: 'Poster scanning needs a valid HuggingFace token before it can continue.',
+                    placeholder: 'hf_…'
+                });
+                if (token && await updateHfToken(token)) return retry();
+                return;
+            }
+            if (!response.ok) {
+                ui.hideLoading();
+                var data = await response.json().catch(function () { return {}; });
+                ui.showStatus('Something went wrong', data.detail || 'The request failed.', false);
+            }
+        }
+
+        /* ------------------------------------------------------------ paste */
+
+        ui.on(ui.qs('#btnProcess'), 'click', async function () {
+            var text = ui.qs('#jobText').value.trim();
+            if (!text) {
+                ui.showStatus('Job details required', 'Paste the job description before processing.', false);
+                ui.qs('#jobText').focus();
+                return;
+            }
+
+            this.disabled = true;
+            ui.showLoading('Sending job details to the assistant…', 'Analysing the role');
+            try {
+                var response = await fetch('/applications/text/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        text: text,
+                        instructions: getInstructions(),
+                        suggest_resume_change: ui.qs('#suggestResumeChange').checked
+                    })
+                });
+                if (response.ok) await handleApplicationStarted(response);
+                else await withOcrRecovery(response, function () { return null; });
+            } catch (error) {
+                ui.hideLoading();
+                ui.showStatus('Connection failed', error.message, false);
+            } finally {
+                this.disabled = false;
+            }
+        });
+
+        /* ------------------------------------------------------ paste poster */
+
+        var posterModal = ui.qs('#posterPreviewModal');
+        var pasteArea = ui.qs('#pasteArea');
+        var pastedPreview = ui.qs('#pastedPreview');
+
+        function closePosterModal() {
+            posterModal.classList.remove('active');
+        }
+
+        ui.qsa('[data-close-poster]').forEach(function (button) {
+            ui.on(button, 'click', closePosterModal);
+        });
+
+        ui.on(ui.qs('#btnPastePoster'), 'click', function () {
+            posterModal.classList.add('active');
+            pasteArea.focus();
+        });
+
+        async function processImage(base64Image) {
+            ui.showLoading('Extracting details from the pasted image…', 'Reading the poster');
+            try {
+                var response = await fetch('/applications/poster/paste/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ image: base64Image, instructions: getInstructions() })
+                });
+                if (response.ok) await handleApplicationStarted(response);
+                else await withOcrRecovery(response, function () { return processImage(base64Image); });
+            } catch (error) {
+                ui.hideLoading();
+                ui.showStatus('Connection failed', error.message, false);
+            }
+        }
+
+        ui.on(pasteArea, 'paste', function (event) {
+            var items = event.clipboardData && event.clipboardData.items;
+            if (!items) return;
+
+            for (var i = 0; i < items.length; i++) {
+                if (items[i].type.indexOf('image') === -1) continue;
+                var file = items[i].getAsFile();
+                var reader = new FileReader();
+                reader.onload = function (loadEvent) {
+                    pastedPreview.src = loadEvent.target.result;
+                    pastedPreview.hidden = false;
+                    ui.qs('#pasteHint').hidden = true;
+                    processImage(loadEvent.target.result);
+                };
+                reader.readAsDataURL(file);
+                event.preventDefault();
+                return;
+            }
+        });
+
+        /* ----------------------------------------------------- upload poster */
+
+        var fileInput = ui.qs('#posterFile');
+
+        ui.on(ui.qs('#btnUploadPoster'), 'click', function () {
+            fileInput.click();
+        });
+
+        ui.on(fileInput, 'change', async function () {
+            if (!fileInput.files.length) return;
+            var formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            formData.append('instructions', getInstructions());
+
+            ui.showLoading('Uploading the poster for analysis…', 'Reading the poster');
+            try {
+                var response = await fetch('/applications/poster/', { method: 'POST', body: formData });
+                if (response.ok) await handleApplicationStarted(response);
+                else await withOcrRecovery(response, function () {
+                    var retry = new FormData();
+                    retry.append('file', fileInput.files[0]);
+                    retry.append('instructions', getInstructions());
+                    return fetch('/applications/poster/', { method: 'POST', body: retry })
+                        .then(function (retryResponse) {
+                            if (retryResponse.ok) return handleApplicationStarted(retryResponse);
+                            return withOcrRecovery(retryResponse, function () { return null; });
+                        });
+                });
+            } catch (error) {
+                ui.hideLoading();
+                ui.showStatus('Connection failed', error.message, false);
+            } finally {
+                fileInput.value = '';
+            }
+        });
+
+        /* --------------------------------------------------------- link flow */
+
+        var urlModal = document.createElement('div');
+        urlModal.className = 'modal';
+        urlModal.innerHTML = '<div class="modal-content">' +
+            '<span class="close-btn" data-close-url>&times;</span>' +
+            '<div class="modal-icon violet"><svg class="icon"><use href="#i-link" /></svg></div>' +
+            '<h2>Import from a link</h2>' +
+            '<p>Paste a direct URL to the job posting. The agent will read the page and prepare your draft.</p>' +
+            '<label for="jobUrlField">Job URL</label>' +
+            '<input id="jobUrlField" type="url" placeholder="https://careers.company.com/apply/...">' +
+            '<div class="modal-actions">' +
+            '<button class="btn btn-secondary" data-close-url>Cancel</button>' +
+            '<button class="btn btn-primary" data-start-url>Initialize agent</button>' +
+            '</div></div>';
+        document.body.appendChild(urlModal);
+
+        ui.on(ui.qs('#btnStartLink'), 'click', function () {
+            urlModal.classList.add('active');
+            window.setTimeout(function () { ui.qs('#jobUrlField').focus(); }, 40);
+        });
+
+        ui.qsa('[data-close-url]', urlModal).forEach(function (button) {
+            ui.on(button, 'click', function () { urlModal.classList.remove('active'); });
+        });
+
+        ui.on(ui.qs('[data-start-url]', urlModal), 'click', async function () {
+            var url = ui.qs('#jobUrlField').value.trim();
+            if (!url) {
+                ui.showStatus('Link required', 'Enter the URL of the job posting first.', false);
+                return;
+            }
+
+            urlModal.classList.remove('active');
+            ui.showLoading('Initializing the auto-fill agent…', 'Opening the role');
+            try {
+                var instructions = getInstructions();
+                var extra = instructions ? '&draft_instructions=' + encodeURIComponent(instructions) : '';
+                var response = await fetch('/applications/job/?job_url=' + encodeURIComponent(url) + extra, { method: 'POST' });
+                if (response.ok) await handleApplicationStarted(response);
+                else {
+                    ui.hideLoading();
+                    var data = await response.json().catch(function () { return {}; });
+                    ui.showStatus('Could not start', data.detail || 'The link could not be processed.', false);
+                }
+            } catch (error) {
+                ui.hideLoading();
+                ui.showStatus('Connection failed', error.message, false);
+            }
+        });
+    })();
+</script>
+{% endblock %}

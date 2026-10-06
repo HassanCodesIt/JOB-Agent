@@ -1,0 +1,629 @@
+{% extends "base.html" %}
+
+{% block title %}LinkedIn Job Finder - Command{% endblock %}
+
+{% block content %}
+<section class="page-heading">
+    <div>
+        <div class="eyebrow">JOB DISCOVERY</div>
+        <div class="title" role="heading" aria-level="1">LinkedIn Job Finder</div>
+        <p>Collect jobs from your LinkedIn session, filter the relevant ones with AI, then draft and send them through your normal workflow.</p>
+    </div>
+    <div class="li-session" id="liSession" data-state="checking">
+        <span class="dot"></span>
+        <span id="liSessionText">Checking browser session…</span>
+    </div>
+</section>
+
+<!-- ───────────────────────── Search & automation ───────────────────────── -->
+<section class="card li-panel">
+    <div class="card-header">
+        <div>
+            <div class="section-title" role="heading" aria-level="2">Search &amp; automation</div>
+            <p>One role at a time, straight from your logged-in LinkedIn session.</p>
+        </div>
+    </div>
+
+    <div class="li-controls">
+        <div class="li-field">
+            <label class="form-label" for="liRole">Job role</label>
+            <select id="liRole"></select>
+            <input type="text" id="liRoleCustom" class="li-role-custom" placeholder="Enter a job role…" hidden>
+            <p class="form-help">Pick a preset or type your own role. Only one role runs per search.</p>
+        </div>
+
+        <div class="li-field">
+            <label class="form-label" for="liSort">Sort by</label>
+            <select id="liSort"></select>
+            <p class="form-help" id="liSortHelp">Applies to Standard Job Search.</p>
+        </div>
+
+        <div class="li-field">
+            <label class="form-label" for="liDate">Date posted</label>
+            <select id="liDate"></select>
+            <p class="form-help" id="liDateHelp">Applies to Standard Job Search.</p>
+        </div>
+    </div>
+
+    <div class="li-mode-grid" id="liModes"></div>
+
+    <p class="form-help li-mode-note">
+        The six presets use the LinkedIn filters they already define. Sort by and Date posted above
+        refine <strong>Standard Job Search</strong>; the other presets show their own fixed filters on each button.
+    </p>
+</section>
+
+<!-- ─────────────────────────── Run status ──────────────────────────────── -->
+<section class="card li-panel">
+    <div class="card-header">
+        <div>
+            <div class="section-title" role="heading" aria-level="2">Run status</div>
+            <p>The search runs as a background process, so this page stays usable while it works.</p>
+        </div>
+        <a class="period-button" href="/api/linkedin/runs" target="_blank" rel="noopener">Run history
+            <svg class="icon" style="width:.9rem;height:.9rem"><use href="#i-chevron" /></svg>
+        </a>
+    </div>
+    <div class="li-run-status" id="liRunStatus" data-state="idle"></div>
+</section>
+
+<!-- ────────────────────────── Collected jobs ───────────────────────────── -->
+<section class="card li-panel">
+    <div class="card-header">
+        <div>
+            <div class="section-title" role="heading" aria-level="2">Collected LinkedIn Jobs</div>
+            <p><span id="liCollectedCount">0</span> jobs imported from your completed searches</p>
+        </div>
+    </div>
+
+    <div class="tab-bar" id="liCollectedTabs">
+        <button class="tab-item active" type="button" data-batch="all">All <span class="li-tab-count" data-count="collected">0</span></button>
+        <button class="tab-item" type="button" data-batch="email">With Email <span class="li-tab-count" data-count="with_email">0</span></button>
+        <button class="tab-item" type="button" data-batch="no_email">Without Email <span class="li-tab-count" data-count="no_email">0</span></button>
+    </div>
+
+    <div class="li-subfilters" id="liCollectedSubs">
+        <button class="filter-button active" type="button" data-sub="all">All paths</button>
+        <button class="filter-button" type="button" data-sub="apply_link">Apply Link</button>
+        <button class="filter-button" type="button" data-sub="linkedin_job">LinkedIn Job</button>
+        <button class="filter-button" type="button" data-sub="image_job">Image Job Post</button>
+    </div>
+
+    <div class="li-jobs" id="liCollectedList" aria-live="polite"></div>
+
+    <div class="li-toolbar">
+        <button class="btn btn-primary" type="button" id="liFilterBtn">
+            <svg class="icon"><use href="#i-sparkles" /></svg> Filter Collected Jobs
+        </button>
+        <label class="li-inline-check">
+            <input type="checkbox" id="liForceFilter">
+            <span>Re-filter jobs already decided</span>
+        </label>
+        <span class="muted" id="liFilterStatus"></span>
+    </div>
+</section>
+
+<!-- ─────────────────────────── Filtered jobs ───────────────────────────── -->
+<section class="card li-panel">
+    <div class="card-header">
+        <div>
+            <div class="section-title" role="heading" aria-level="2">Filtered Jobs</div>
+            <p>Accepted by the relevance filter. Rejected jobs stay saved but never occupy this view.</p>
+        </div>
+    </div>
+
+    <div class="tab-bar" id="liFilteredTabs">
+        <button class="tab-item active" type="button" data-batch="all">All <span class="li-tab-count" data-count="accepted">0</span></button>
+        <button class="tab-item" type="button" data-batch="email">With Email <span class="li-tab-count" data-count="accepted_email">0</span></button>
+        <button class="tab-item" type="button" data-batch="no_email">Without Email <span class="li-tab-count" data-count="accepted_no_email">0</span></button>
+    </div>
+
+    <div class="li-subfilters" id="liFilteredSubs">
+        <button class="filter-button active" type="button" data-sub="all">All paths</button>
+        <button class="filter-button" type="button" data-sub="apply_link">Apply Link</button>
+        <button class="filter-button" type="button" data-sub="linkedin_job">LinkedIn Job</button>
+        <button class="filter-button" type="button" data-sub="image_job">Image Job Post</button>
+    </div>
+
+    <div class="li-jobs" id="liFilteredList" aria-live="polite"></div>
+</section>
+
+<!-- ─────────────────────── LinkedIn filter settings ────────────────────── -->
+<section class="card li-panel" id="liSettingsPanel">
+    <div class="card-header">
+        <div>
+            <div class="section-title" role="heading" aria-level="2">LinkedIn Filter Settings</div>
+            <p>These criteria decide which collected jobs are treated as relevant.</p>
+        </div>
+        <span class="li-model-badge">{{ model_label }}</span>
+    </div>
+
+    <div class="li-settings-grid">
+        <div class="li-field">
+            <label class="form-label" for="liMaxExp">Maximum experience (years)</label>
+            <input type="number" id="liMaxExp" min="0" max="30" step="0.5">
+        </div>
+
+        <div class="li-field li-field-check">
+            <label class="form-label" for="liAcceptUnspecified">Experience not mentioned</label>
+            <label class="li-inline-check">
+                <input type="checkbox" id="liAcceptUnspecified">
+                <span>Accept jobs that do not state an experience requirement</span>
+            </label>
+        </div>
+
+        <div class="li-field">
+            <label class="form-label" for="liBatchSize">Jobs per request</label>
+            <input type="number" id="liBatchSize" min="1" max="64" step="1">
+        </div>
+
+        <div class="li-field">
+            <label class="form-label" for="liMaxJd">Max JD characters</label>
+            <input type="number" id="liMaxJd" min="400" max="50000" step="100">
+        </div>
+    </div>
+
+    <div class="li-settings-actions">
+        <button class="btn btn-secondary" type="button" id="liApplySettings">Apply settings to prompt</button>
+        <button class="btn btn-primary" type="button" id="liSaveSettings">Save settings</button>
+        <span class="muted" id="liSettingsStatus"></span>
+    </div>
+
+    <label class="form-label" for="liPrompt">Filtering prompt</label>
+    <textarea id="liPrompt" rows="7" spellcheck="false"></textarea>
+    <p class="form-help">
+        The final instruction sent to the model. Editing it here overrides the structured controls
+        above and bumps the prompt version, so already-decided jobs are re-checked when you filter again.
+    </p>
+
+    <label class="form-label">Preview of the final prompt</label>
+    <pre class="li-prompt-preview" id="liPromptPreview"></pre>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    var META = {{ meta | tojson }};
+    var SUFFIX = (META.filter_settings && META.filter_settings.format_instructions) || '';
+
+    var state = {
+        activeRun: META.active_run || null,
+        polling: null,
+        collected: { batch: 'all', sub: 'all', offset: 0 },
+        filtered: { batch: 'all', sub: 'all', offset: 0 },
+        filtering: false
+    };
+
+    /* ------------------------------ header ------------------------------ */
+
+    function fillSelect(select, options, selected) {
+        select.innerHTML = '';
+        options.forEach(function (option) {
+            var node = document.createElement('option');
+            node.value = option.value;
+            node.textContent = option.label;
+            if (option.value === selected) node.selected = true;
+            select.appendChild(node);
+        });
+    }
+
+    function renderModes() {
+        var host = ui.qs('#liModes');
+        host.innerHTML = '';
+        META.modes.forEach(function (mode) {
+            var button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'li-mode-card';
+            button.setAttribute('data-mode', mode.key);
+            button.innerHTML =
+                '<strong>' + ui.escapeHtml(mode.label) + '</strong>' +
+                '<small>' + ui.escapeHtml(mode.description) + '</small>' +
+                '<span class="li-mode-facets">' + facetsFor(mode).map(function (label) {
+                    return '<em>' + ui.escapeHtml(label) + '</em>';
+                }).join('') + '</span>';
+            ui.on(button, 'click', function () { startRun(mode); });
+            host.appendChild(button);
+        });
+        syncModeButtons();
+    }
+
+    function facetsFor(mode) {
+        if (!mode.searchable) return mode.key === 'feed' ? ['Home feed'] : ['Continuation'];
+        if (mode.key === 'standard') {
+            var facets = [];
+            if (ui.qs('#liDate').value === 'past_24_hours') facets.push('Past 24 hours');
+            facets.push(ui.qs('#liSort').value === 'latest' ? 'Most recent' : 'Most relevant');
+            return facets;
+        }
+        var labels = [];
+        if (mode.fixed_date === 'past_24_hours') labels.push('Past 24 hours');
+        if (mode.fixed_sort === 'latest') labels.push('Most recent');
+        else if (mode.fixed_sort) labels.push('Most relevant');
+        return labels;
+    }
+
+    function refreshModeFacets() {
+        ui.qsa('.li-mode-card').forEach(function (button) {
+            var mode = META.modes.filter(function (m) { return m.key === button.getAttribute('data-mode'); })[0];
+            if (!mode) return;
+            var host = button.querySelector('.li-mode-facets');
+            host.innerHTML = facetsFor(mode).map(function (label) {
+                return '<em>' + ui.escapeHtml(label) + '</em>';
+            }).join('');
+        });
+    }
+
+    function syncFacetControls() {
+        var dateValue = ui.qs('#liDate').value;
+        var sortSelect = ui.qs('#liSort');
+        Array.prototype.forEach.call(sortSelect.options, function (option) {
+            option.disabled = (option.value === 'latest' && dateValue !== 'past_24_hours');
+        });
+        if (sortSelect.value === 'latest' && dateValue !== 'past_24_hours') {
+            sortSelect.value = 'relevance';
+        }
+        ui.qs('#liSortHelp').textContent = dateValue === 'past_24_hours'
+            ? 'Applies to Standard Job Search.'
+            : 'Most recent needs Date posted: Past 24 hours.';
+        refreshModeFacets();
+    }
+
+    function initControls() {
+        fillSelect(ui.qs('#liSort'), META.sort_options, META.search.sort_by);
+        fillSelect(ui.qs('#liDate'), META.date_options, META.search.date_posted);
+
+        var roleSelect = ui.qs('#liRole');
+        roleSelect.innerHTML = '';
+        META.preset_roles.forEach(function (role) {
+            var option = document.createElement('option');
+            option.value = role;
+            option.textContent = role;
+            if (role === META.search.default_role) option.selected = true;
+            roleSelect.appendChild(option);
+        });
+        var custom = document.createElement('option');
+        custom.value = '__custom__';
+        custom.textContent = 'Custom role…';
+        roleSelect.appendChild(custom);
+
+        if (META.search.default_role && META.preset_roles.indexOf(META.search.default_role) === -1) {
+            custom.selected = true;
+            ui.qs('#liRoleCustom').hidden = false;
+            ui.qs('#liRoleCustom').value = META.search.default_role;
+        }
+
+        ui.on(roleSelect, 'change', function () {
+            var isCustom = roleSelect.value === '__custom__';
+            ui.qs('#liRoleCustom').hidden = !isCustom;
+            if (isCustom) ui.qs('#liRoleCustom').focus();
+        });
+        ui.on(ui.qs('#liDate'), 'change', syncFacetControls);
+        ui.on(ui.qs('#liSort'), 'change', refreshModeFacets);
+        syncFacetControls();
+        renderModes();
+    }
+
+    function selectedRole() {
+        var select = ui.qs('#liRole');
+        if (select.value === '__custom__') return ui.qs('#liRoleCustom').value.trim();
+        return select.value;
+    }
+
+    /* ---------------------------- run status ---------------------------- */
+
+    function statusLabel(run) {
+        if (!run) return 'Idle';
+        if (run.status === 'running') return 'Running';
+        if (run.status === 'completed') return 'Completed';
+        if (run.status === 'interrupted') return 'Interrupted';
+        return 'Failed';
+    }
+
+    function renderRunStatus(run) {
+        var host = ui.qs('#liRunStatus');
+        state.activeRun = run;
+        if (!run) {
+            host.setAttribute('data-state', 'idle');
+            host.innerHTML = '<p class="muted">No search has been started yet. Pick a role and choose a run above.</p>';
+            syncModeButtons();
+            return;
+        }
+        host.setAttribute('data-state', run.status);
+        var rows = [
+            ['Status', statusLabel(run)],
+            ['Mode', run.mode_label],
+            ['Role', run.role || '—'],
+            ['Filters', run.facets.length ? run.facets.join(' · ') : 'None'],
+            ['Started', run.started_at ? run.started_at.replace('T', ' ').slice(0, 16) : '—']
+        ];
+        if (run.status === 'running') {
+            rows.push(['Process', run.process_state || 'started']);
+        } else {
+            rows.push(['Finished', run.completed_at ? run.completed_at.replace('T', ' ').slice(0, 16) : '—']);
+            rows.push(['Exit code', run.exit_code === null || run.exit_code === undefined ? '—' : String(run.exit_code)]);
+            rows.push(['Collected', String(run.collected_count || 0)]);
+        }
+        var html = '<div class="li-run-grid">' + rows.map(function (row) {
+            return '<div><span>' + ui.escapeHtml(row[0]) + '</span><strong>' + ui.escapeHtml(row[1]) + '</strong></div>';
+        }).join('') + '</div>';
+        if (run.error_message) {
+            html += '<div class="li-run-error">' + ui.escapeHtml(run.error_message) + '</div>';
+        }
+        host.innerHTML = html;
+        syncModeButtons();
+    }
+
+    function syncModeButtons() {
+        var busy = !!state.activeRun && state.activeRun.status === 'running';
+        ui.qsa('.li-mode-card').forEach(function (button) { button.disabled = busy; });
+        ui.qs('#liFilterBtn').disabled = busy || state.filtering;
+    }
+
+    function startRun(mode) {
+        var role = selectedRole();
+        if (!role) {
+            ui.showStatus('Choose a role', 'Enter a job role before starting a LinkedIn search.', false);
+            return;
+        }
+        var facets = { sort_by: null, date_posted: null };
+        if (mode.searchable && mode.key === 'standard') {
+            facets.sort_by = ui.qs('#liSort').value;
+            facets.date_posted = ui.qs('#liDate').value;
+        }
+
+        ui.qsa('.li-mode-card').forEach(function (button) { button.disabled = true; });
+
+        ui.postJson('/api/linkedin/runs/start', {
+            mode: mode.key,
+            role: role,
+            sort_by: facets.sort_by,
+            date_posted: facets.date_posted
+        }).then(function (data) {
+            ui.toast('LinkedIn search started');
+            renderRunStatus(data.run);
+            persistSearchDefaults(role, facets);
+            watchRun(data.run.id);
+        }).catch(function (error) {
+            ui.showStatus('Could not start the search', error.message, false);
+            syncModeButtons();
+        });
+    }
+
+    function persistSearchDefaults(role, facets) {
+        // Best effort: the search defaults only preselect controls next time.
+        ui.postJson('/api/linkedin/search-settings', {
+            default_role: role,
+            sort_by: facets.sort_by || ui.qs('#liSort').value,
+            date_posted: facets.date_posted || ui.qs('#liDate').value
+        }).then(function () {
+            return ui.request('/api/linkedin/meta');
+        }).then(function (meta) {
+            META.counts = meta.counts;
+            META.runs = meta.runs;
+            renderCounts();
+        }).catch(function () {});
+    }
+
+    function watchRun(runId) {
+        if (state.polling) window.clearInterval(state.polling);
+        state.polling = window.setInterval(function () {
+            ui.request('/api/linkedin/runs/' + runId).then(function (data) {
+                renderRunStatus(data.run);
+                if (data.run.status && data.run.status !== 'running') {
+                    window.clearInterval(state.polling);
+                    state.polling = null;
+                    if (data.run.status === 'completed') {
+                        ui.toast('Search finished · ' + (data.run.collected_count || 0) + ' new jobs');
+                    } else if (data.run.status === 'failed') {
+                        ui.showStatus('LinkedIn search failed', data.run.error_message || 'Check the run log.', false);
+                    }
+                    refreshMeta();
+                    loadJobs('collected');
+                    loadJobs('filtered');
+                }
+            }).catch(function () {});
+        }, 2000);
+    }
+
+    /* --------------------------- browser status -------------------------- */
+
+    function loadBrowserStatus() {
+        ui.request('/api/linkedin/browser-status').then(function (data) {
+            var host = ui.qs('#liSession');
+            host.setAttribute('data-state', data.reachable ? 'ready' : 'offline');
+            ui.qs('#liSessionText').textContent = data.reachable
+                ? 'Chrome session connected'
+                : 'Chrome session not detected';
+            if (!data.reachable) host.setAttribute('title', data.message || '');
+        }).catch(function () {
+            ui.qs('#liSession').setAttribute('data-state', 'offline');
+            ui.qs('#liSessionText').textContent = 'Browser status unavailable';
+        });
+    }
+
+    /* ------------------------------- jobs -------------------------------- */
+
+    function renderCounts() {
+        var counts = META.counts || {};
+        ui.qs('#liCollectedCount').textContent = counts.collected || 0;
+        ui.qsa('.li-tab-count').forEach(function (node) {
+            var key = node.getAttribute('data-count');
+            node.textContent = counts[key] || 0;
+        });
+    }
+
+    function bindDraftButtons(scope) {
+        var host = scope === 'filtered' ? ui.qs('#liFilteredList') : ui.qs('#liCollectedList');
+        ui.qsa('.js-draft-apply', host).forEach(function (button) {
+            ui.on(button, 'click', function () { draftAndApply(button); });
+        });
+    }
+
+    function draftAndApply(button) {
+        button.disabled = true;
+        ui.postJson('/api/linkedin/jobs/' + button.getAttribute('data-id') + '/draft-apply', {})
+            .then(function (data) {
+                ui.toast(data.message || 'Draft started');
+                window.setTimeout(function () { window.location.href = '/drafts'; }, 700);
+            }).catch(function (error) {
+                button.disabled = false;
+                ui.showStatus('Could not start the draft', error.message, false);
+            });
+    }
+
+    function loadJobs(scope) {
+        var local = scope === 'filtered' ? state.filtered : state.collected;
+        var host = scope === 'filtered' ? ui.qs('#liFilteredList') : ui.qs('#liCollectedList');
+        var params = 'scope=' + (scope === 'filtered' ? 'filtered' : 'collected') +
+            '&batch=' + encodeURIComponent(local.batch) +
+            '&sub=' + encodeURIComponent(local.sub);
+
+        host.innerHTML = '<p class="muted li-jobs-loading">Loading jobs…</p>';
+        return ui.request('/api/linkedin/jobs?' + params).then(function (data) {
+            if (!data.count) {
+                host.innerHTML = scope === 'filtered'
+                    ? '<div class="empty-state"><svg class="icon"><use href="#i-inbox" /></svg>' +
+                      '<div>No filtered jobs yet.</div>' +
+                      '<p class="muted">Run <strong>Filter Collected Jobs</strong> to populate this view.</p></div>'
+                    : '<div class="empty-state"><svg class="icon"><use href="#i-inbox" /></svg>' +
+                      '<div>No collected jobs yet.</div>' +
+                      '<p class="muted">Start a LinkedIn search above to collect jobs.</p></div>';
+                return data;
+            }
+            host.innerHTML = data.html;
+            bindDraftButtons(scope);
+            return data;
+        }).catch(function (error) {
+            host.innerHTML = '<p class="li-run-error">' + ui.escapeHtml(error.message) + '</p>';
+        });
+    }
+
+    function wireTabs(tabsId, subsId, local) {
+        var tabs = ui.qs('#' + tabsId);
+        var subs = ui.qs('#' + subsId);
+        ui.qsa('.tab-item', tabs).forEach(function (button) {
+            ui.on(button, 'click', function () {
+                ui.qsa('.tab-item', tabs).forEach(function (other) { other.classList.remove('active'); });
+                button.classList.add('active');
+                local.batch = button.getAttribute('data-batch');
+                loadJobs(tabsId === 'liFilteredTabs' ? 'filtered' : 'collected');
+            });
+        });
+        ui.qsa('.filter-button', subs).forEach(function (button) {
+            ui.on(button, 'click', function () {
+                ui.qsa('.filter-button', subs).forEach(function (other) { other.classList.remove('active'); });
+                button.classList.add('active');
+                local.sub = button.getAttribute('data-sub');
+                loadJobs(subsId === 'liFilteredSubs' ? 'filtered' : 'collected');
+            });
+        });
+    }
+
+    /* ----------------------------- filtering ---------------------------- */
+
+    function runFilter() {
+        if (state.filtering) return;
+        state.filtering = true;
+        var button = ui.qs('#liFilterBtn');
+        var status = ui.qs('#liFilterStatus');
+        button.disabled = true;
+        button.innerText = 'Filtering…';
+        status.textContent = 'Classifying collected jobs…';
+
+        ui.postJson('/api/linkedin/filter', { force: ui.qs('#liForceFilter').checked })
+            .then(function (data) {
+                var summary = data.summary || {};
+                META.counts = data.counts || META.counts;
+                renderCounts();
+                status.textContent = summary.accepted + ' relevant · ' + summary.rejected + ' rejected · ' +
+                    summary.errors + ' errors';
+                ui.toast('Filtering complete');
+                return loadJobs('filtered');
+            }).catch(function (error) {
+                status.textContent = '';
+                ui.showStatus('Filtering failed', error.message, false);
+            }).finally(function () {
+            state.filtering = false;
+            button.disabled = false;
+            button.innerHTML = '<svg class="icon"><use href="#i-sparkles" /></svg> Filter Collected Jobs';
+            loadJobs('collected');
+            syncModeButtons();
+        });
+    }
+
+    /* ----------------------------- settings ----------------------------- */
+
+    function renderPromptPreview() {
+        var prompt = ui.qs('#liPrompt').value;
+        ui.qs('#liPromptPreview').textContent = (prompt || '').trim() + (SUFFIX || '');
+    }
+
+    function applySettingsToForm(settings) {
+        ui.qs('#liMaxExp').value = settings.max_experience_years;
+        ui.qs('#liAcceptUnspecified').checked = !!settings.accept_unspecified_experience;
+        ui.qs('#liBatchSize').value = settings.batch_size;
+        ui.qs('#liMaxJd').value = settings.max_jd_chars;
+        ui.qs('#liPrompt').value = settings.prompt;
+        SUFFIX = settings.format_instructions || SUFFIX;
+        renderPromptPreview();
+    }
+
+    function saveSettings(regenerate) {
+        var status = ui.qs('#liSettingsStatus');
+        status.textContent = 'Saving…';
+        ui.postJson('/api/linkedin/filter-settings', {
+            prompt: ui.qs('#liPrompt').value,
+            regenerate_prompt: !!regenerate,
+            max_experience_years: parseFloat(ui.qs('#liMaxExp').value),
+            accept_unspecified_experience: ui.qs('#liAcceptUnspecified').checked,
+            batch_size: parseInt(ui.qs('#liBatchSize').value, 10),
+            max_jd_chars: parseInt(ui.qs('#liMaxJd').value, 10)
+        }).then(function (data) {
+            applySettingsToForm(data.settings);
+            status.textContent = 'Saved · prompt version ' + data.settings.prompt_version;
+            ui.toast('Filter settings saved');
+        }).catch(function (error) {
+            status.textContent = '';
+            ui.showStatus('Could not save settings', error.message, false);
+        });
+    }
+
+    function refreshMeta() {
+        return ui.request('/api/linkedin/meta').then(function (meta) {
+            META.counts = meta.counts;
+            META.runs = meta.runs;
+            META.active_run = meta.active_run;
+            if (!state.polling) renderRunStatus(meta.active_run);
+            renderCounts();
+        }).catch(function () {});
+    }
+
+    /* ------------------------------- boot -------------------------------- */
+
+    function boot() {
+        initControls();
+        renderRunStatus(state.activeRun);
+        renderCounts();
+        applySettingsToForm(META.filter_settings);
+        wireTabs('liCollectedTabs', 'liCollectedSubs', state.collected);
+        wireTabs('liFilteredTabs', 'liFilteredSubs', state.filtered);
+        loadJobs('collected');
+        loadJobs('filtered');
+        loadBrowserStatus();
+        window.setInterval(loadBrowserStatus, 15000);
+
+        ui.on(ui.qs('#liFilterBtn'), 'click', runFilter);
+        ui.on(ui.qs('#liSaveSettings'), 'click', function () { saveSettings(false); });
+        ui.on(ui.qs('#liApplySettings'), 'click', function () { saveSettings(true); });
+        ui.on(ui.qs('#liPrompt'), 'input', renderPromptPreview);
+
+        if (state.activeRun && state.activeRun.status === 'running') {
+            watchRun(state.activeRun.id);
+        } else if (state.activeRun) {
+            refreshMeta();
+        }
+    }
+
+    boot();
+</script>
+{% endblock %}

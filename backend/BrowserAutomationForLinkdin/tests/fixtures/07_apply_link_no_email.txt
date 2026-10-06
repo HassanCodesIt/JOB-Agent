@@ -1,0 +1,20 @@
+Meera Krishnan
+We are hiring a Generative AI Engineer.
+
+About the role:
+You will work on LLM applications, RAG pipelines, AI agents and production AI systems.
+
+Requirements:
+- Python
+- LLMs
+- RAG
+- LangChain
+- FastAPI
+
+Location: Bangalore
+
+Interested candidates can apply here:
+
+https://vertexlabs.example/careers/generative-ai-engineer
+
+Please apply through the link above.

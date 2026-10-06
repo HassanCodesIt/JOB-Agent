@@ -1,0 +1,11 @@
+{
+  "title": "Command — Career Workspace",
+  "description": "Manage job applications, drafts, replies, outreach, resumes, and LinkedIn opportunities in one focused career workspace.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": true,
+    "ignoreReducedMotion": false
+  }
+}

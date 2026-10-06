@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Command - Career Workspace{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="/static/style.css?v=2.0">
+</head>
+
+<body class="app-shell">
+    <!-- Icon sprite (inline so pages never wait on a second request) -->
+    <svg width="0" height="0" aria-hidden="true" style="position:absolute">
+        <defs>
+            <symbol id="i-target" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="9" />
+                <circle cx="12" cy="12" r="4" />
+                <path d="M12 3V1M21 12h2" />
+            </symbol>
+            <symbol id="i-dashboard" viewBox="0 0 24 24">
+                <rect x="3" y="3" width="7" height="7" rx="2" />
+                <rect x="14" y="3" width="7" height="7" rx="2" />
+                <rect x="3" y="14" width="7" height="7" rx="2" />
+                <rect x="14" y="14" width="7" height="7" rx="2" />
+            </symbol>
+            <symbol id="i-document" viewBox="0 0 24 24">
+                <path d="M6 3h8l4 4v14H6z" />
+                <path d="M14 3v5h5M9 12h6M9 16h6" />
+            </symbol>
+            <symbol id="i-mail" viewBox="0 0 24 24">
+                <rect x="3" y="5" width="18" height="14" rx="3" />
+                <path d="m4 7 8 6 8-6" />
+            </symbol>
+            <symbol id="i-send" viewBox="0 0 24 24">
+                <path d="m22 2-9 20-2-9-9-2zM22 2 11 13" />
+            </symbol>
+            <symbol id="i-briefcase" viewBox="0 0 24 24">
+                <rect x="3" y="7" width="18" height="13" rx="2" />
+                <path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 12h18" />
+            </symbol>
+            <symbol id="i-clock" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="9" />
+                <path d="M12 7v5l3 2" />
+            </symbol>
+            <symbol id="i-user" viewBox="0 0 24 24">
+                <circle cx="12" cy="8" r="4" />
+                <path d="M4 21a8 8 0 0 1 16 0" />
+            </symbol>
+            <symbol id="i-search" viewBox="0 0 24 24">
+                <circle cx="11" cy="11" r="7" />
+                <path d="m20 20-4-4" />
+            </symbol>
+            <symbol id="i-plus" viewBox="0 0 24 24">
+                <path d="M12 5v14M5 12h14" />
+            </symbol>
+            <symbol id="i-refresh" viewBox="0 0 24 24">
+                <path d="M20 11a8 8 0 1 0-2.3 5.7" />
+                <path d="M20 5v6h-6" />
+            </symbol>
+            <symbol id="i-menu" viewBox="0 0 24 24">
+                <path d="M4 7h16M4 12h16M4 17h16" />
+            </symbol>
+            <symbol id="i-chevron" viewBox="0 0 24 24">
+                <path d="m9 18 6-6-6-6" />
+            </symbol>
+            <symbol id="i-more" viewBox="0 0 24 24">
+                <circle cx="5" cy="12" r="1" fill="currentColor" stroke="none" />
+                <circle cx="12" cy="12" r="1" fill="currentColor" stroke="none" />
+                <circle cx="19" cy="12" r="1" fill="currentColor" stroke="none" />
+            </symbol>
+            <symbol id="i-sparkles" viewBox="0 0 24 24">
+                <path d="m12 3 1.2 3.8L17 8l-3.8 1.2L12 13l-1.2-3.8L7 8l3.8-1.2zM5 15l.8 2.2L8 18l-2.2.8L5 21l-.8-2.2L2 18l2.2-.8zM19 14l.7 1.8 1.8.7-1.8.7L19 19l-.7-1.8-1.8-.7 1.8-.7z" />
+            </symbol>
+            <symbol id="i-arrow" viewBox="0 0 24 24">
+                <path d="m9 18 6-6-6-6" />
+            </symbol>
+            <symbol id="i-trash" viewBox="0 0 24 24">
+                <path d="M4 7h16M9 7V4h6v3M7 7l1 14h8l1-14M10 11v6M14 11v6" />
+            </symbol>
+            <symbol id="i-archive" viewBox="0 0 24 24">
+                <path d="M4 7h16M6 7v12h12V7M9 11h6" />
+                <path d="M3 4h18v3H3z" />
+            </symbol>
+            <symbol id="i-upload" viewBox="0 0 24 24">
+                <path d="M12 19V5M6 11l6-6 6 6" />
+                <path d="M4 19h16" />
+            </symbol>
+            <symbol id="i-link" viewBox="0 0 24 24">
+                <path d="M10 13a5 5 0 0 0 7 0l2-2a5 5 0 0 0-7-7l-1 1" />
+                <path d="M14 11a5 5 0 0 0-7 0l-2 2a5 5 0 0 0 7 7l1-1" />
+            </symbol>
+            <symbol id="i-check" viewBox="0 0 24 24">
+                <path d="m5 13 4 4L19 7" />
+            </symbol>
+            <symbol id="i-settings" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="3" />
+                <path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4" />
+            </symbol>
+            <symbol id="i-chart" viewBox="0 0 24 24">
+                <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />
+            </symbol>
+            <symbol id="i-inbox" viewBox="0 0 24 24">
+                <path d="M4 13h4l2 3h4l2-3h4" />
+                <path d="M4 13 6 5h12l2 8v6H4z" />
+            </symbol>
+            <symbol id="i-eye" viewBox="0 0 24 24">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                <circle cx="12" cy="12" r="3" />
+            </symbol>
+            <symbol id="i-file" viewBox="0 0 24 24">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <path d="M14 2v6h6" />
+            </symbol>
+        </defs>
+    </svg>
+
+    {% set nav_key = 'dashboard' if request.url.path == '/' else request.url.path.strip('/').split('/')[0] %}
+    {% set weekly_goal = 15 %}
+    {% set weekly_done = weekly_applications or 0 %}
+    {% set weekly_pct = [((weekly_done / weekly_goal) * 100) | round(0, 'floor') | int, 100] | min %}
+
+    <aside class="sidebar" id="sidebar">
+        <a class="brand" href="/" style="color:inherit">
+            <span class="brand-mark"><svg class="icon" style="width:1.375rem;height:1.375rem"><use href="#i-target" /></svg></span>
+            <span>
+                <span class="brand-name">Command</span>
+                <span class="brand-label">Career workspace</span>
+            </span>
+        </a>
+
+        <nav class="primary-nav" aria-label="Primary navigation">
+            <div class="nav-label">Workspace</div>
+            <a class="nav-item {% if nav_key == 'dashboard' %}active{% endif %}" href="/">
+                <svg class="icon"><use href="#i-dashboard" /></svg><span>Dashboard</span>
+            </a>
+            <a class="nav-item {% if nav_key == 'drafts' %}active{% endif %}" href="/drafts">
+                <svg class="icon"><use href="#i-document" /></svg><span>Drafts</span>
+                {% if nav_draft_count %}<span class="nav-count">{{ nav_draft_count }}</span>{% endif %}
+            </a>
+            <a class="nav-item {% if nav_key == 'replies' %}active{% endif %}" href="/replies">
+                <svg class="icon"><use href="#i-mail" /></svg><span>Reply center</span>
+            </a>
+            <a class="nav-item {% if nav_key == 'outreach' %}active{% endif %}" href="/outreach">
+                <svg class="icon"><use href="#i-send" /></svg><span>Outreach</span>
+            </a>
+            <a class="nav-item {% if nav_key == 'resumes' %}active{% endif %}" href="/resumes">
+                <svg class="icon"><use href="#i-briefcase" /></svg><span>Resumes</span>
+            </a>
+            <a class="nav-item {% if nav_key == 'linkedin-jobs' %}active{% endif %}" href="/linkedin-jobs">
+                <svg class="icon"><use href="#i-search" /></svg><span>LinkedIn Job Finder</span>
+            </a>
+
+            <div class="nav-label nav-section">Account</div>
+            <a class="nav-item {% if nav_key == 'sent' %}active{% endif %}" href="/sent">
+                <svg class="icon"><use href="#i-clock" /></svg><span>Sent history</span>
+            </a>
+            <a class="nav-item {% if nav_key == 'settings' %}active{% endif %}" href="/settings">
+                <svg class="icon"><use href="#i-settings" /></svg><span>Settings</span>
+            </a>
+        </nav>
+
+        <div class="sidebar-promo">
+            <div class="promo-icon"><svg class="icon"><use href="#i-sparkles" /></svg></div>
+            <div class="promo-title">Your weekly target</div>
+            <div class="promo-copy">{{ weekly_done }} of {{ weekly_goal }} applications sent</div>
+            <div class="progress-track"><span style="width: {{ weekly_pct }}%"></span></div>
+            <a class="text-button" href="/drafts">Review drafts <svg class="icon" style="width:.85rem;height:.85rem"><use href="#i-arrow" /></svg></a>
+        </div>
+
+        <a class="profile-card" href="/settings">
+            <span class="avatar">{{ initials }}</span>
+            <span class="profile-meta">
+                <strong>{{ display_name }}</strong>
+                <small>Personal workspace</small>
+            </span>
+            <svg class="icon"><use href="#i-more" /></svg>
+        </a>
+    </aside>
+
+    <div class="sidebar-scrim" id="sidebarScrim"></div>
+
+    <section class="workspace">
+        <header class="topbar">
+            <button class="icon-button mobile-menu" id="menuToggle" type="button" aria-label="Open navigation">
+                <svg class="icon"><use href="#i-menu" /></svg>
+            </button>
+
+            <div class="search-box">
+                <svg class="icon" style="width:1rem;height:1rem"><use href="#i-search" /></svg>
+                <input id="globalSearch" type="search" placeholder="Search companies, roles..." aria-label="Search this page">
+                <span class="shortcut">Ctrl K</span>
+            </div>
+
+            <div class="topbar-actions">
+                <div class="account-switcher" id="accountSwitcher">
+                    <button class="account-trigger" type="button" aria-expanded="false" aria-haspopup="true">
+                        <span class="account-avatar" id="accountAvatar">-</span>
+                        <span class="account-copy">
+                            <small>Sending from</small>
+                            <strong id="accountLabel">Loading.</strong>
+                        </span>
+                        <svg class="icon" style="width:.85rem;height:.85rem"><use href="#i-chevron" /></svg>
+                    </button>
+                </div>
+
+                <button class="sync-button" type="button" data-sync>
+                    <svg class="icon" style="width:1rem;height:1rem"><use href="#i-refresh" /></svg><span>Sync</span>
+                </button>
+
+                <a class="primary-button" href="/apply" style="padding:.68rem 1rem;font-size:.7rem;font-weight:700">
+                    <svg class="icon"><use href="#i-plus" /></svg> Add application
+                </a>
+            </div>
+        </header>
+
+        <div class="content">
+            {% block content %}{% endblock %}
+        </div>
+    </section>
+
+    <!-- Shared process overlay -->
+    <div class="process-overlay" id="loadingOverlay" hidden>
+        <div class="process-modal">
+            <div class="spinner"></div>
+            <div class="process-title" id="loadingTitle">Working…</div>
+            <p id="loadingText">One moment.</p>
+        </div>
+    </div>
+
+    <!-- Shared status dialog -->
+    <div class="modal" id="statusModal">
+        <div class="modal-content centered">
+            <span class="close-btn" data-close-modal>&times;</span>
+            <div class="modal-icon success" id="statusIconBox">
+                <svg class="icon" style="width:1.2rem;height:1.2rem"><use href="#i-check" /></svg>
+            </div>
+            <h2 id="statusTitle">Done</h2>
+            <p id="statusMessage"></p>
+            <button class="btn btn-primary" data-close-modal style="width:100%">Got it</button>
+        </div>
+    </div>
+
+    <!-- Shared confirm dialog -->
+    <div class="modal" id="confirmModal">
+        <div class="modal-content centered">
+            <div class="modal-icon danger">
+                <svg class="icon" style="width:1.2rem;height:1.2rem"><use href="#i-trash" /></svg>
+            </div>
+            <h2 id="confirmTitle">Are you sure?</h2>
+            <p id="confirmMessage"></p>
+            <div class="modal-actions stack-actions">
+                <button class="btn btn-secondary" data-confirm-no>Cancel</button>
+                <button class="btn btn-danger" data-confirm-yes>Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Shared prompt dialog -->
+    <div class="modal" id="promptModal">
+        <div class="modal-content">
+            <span class="close-btn" data-prompt-no>&times;</span>
+            <h2 id="promptTitle">Tell the assistant what to change</h2>
+            <p id="promptMessage">Optional guidance used only for this draft.</p>
+            <label for="promptInputField">Instructions</label>
+            <textarea id="promptInputField" rows="4" placeholder="Make it warmer, mention Python automation, keep it concise..."></textarea>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" data-prompt-no>Cancel</button>
+                <button class="btn btn-primary" data-prompt-yes>Apply</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Connect a sending account -->
+    <div class="modal" id="connectAccountModal">
+        <div class="modal-content">
+            <span class="close-btn" data-close-account>&times;</span>
+            <div class="modal-icon violet"><svg class="icon"><use href="#i-mail" /></svg></div>
+            <h2>Connect a sending account</h2>
+            <p>Add a second Gmail address so you can send from either one. Use a Google
+                <strong>app password</strong>, not your normal account password.</p>
+
+            <div class="account-slots" id="accountSlots"></div>
+
+            <label for="connectEmail">Email address</label>
+            <input type="email" id="connectEmail" placeholder="you@gmail.com" autocomplete="username">
+
+            <label for="connectPassword">App password</label>
+            <div class="input-with-action">
+                <input type="password" id="connectPassword" placeholder="16-character app password"
+                    autocomplete="current-password">
+                <button type="button" class="input-action" data-toggle-secret="connectPassword"
+                    aria-label="Show or hide the app password">
+                    <svg class="icon"><use href="#i-eye" /></svg>
+                </button>
+            </div>
+            <p class="form-help">
+                Create one in Google Account &rsaquo; Security &rsaquo; 2-Step Verification &rsaquo;
+                App passwords. Stored locally, never sent anywhere else.
+            </p>
+
+            <div class="modal-actions">
+                <button class="btn btn-secondary" data-close-account>Cancel</button>
+                <button class="btn btn-primary" id="btnConnectAccount">Connect account</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toastHost"></div>
+
+    <script src="/static/app.js?v=2.0"></script>
+    {% block scripts %}{% endblock %}
+</body>
+
+</html>

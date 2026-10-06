@@ -1,28 +1,55 @@
 # Environment and keys
 .env
+*.env
+.env.*
+!.env.example
+email_accounts.json
+email_state.json
 
 # Virtual Environment
 venv/
 ENV/
 env/
+.venv/
+*/venv/
+*/.venv/
+
+# Node / Frontend
+node_modules/
+*/node_modules/
+dist/
+build/
+.pnpm-store/
 
 # Python Cache
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
+.pytest_cache/
 
 # Local Database / SQLite if any
 *.db
 *.sqlite
+*.sqlite3
 
-# Application Generated Folders
+# Chrome Profiles & Browser Session Data
+.chrome-linkedin-profile/
+.chrome-*/
+chrome_profile/
+user_data/
+
+# Application Generated Folders & Logs
 uploads/
 posters/
 screenshots/
 career_ops_pdfs/
 career_ops_temp/
 scratch/
+**/logs/
+*.log
+**/scraping_runs/
+**/data/scraping_runs/
 
 # Temporary / Backup / Dev files
 main_backup.py
@@ -36,3 +63,9 @@ cleanup_dashboard.py
 cleanup_stuck_apps.py
 update_profile.py
 career_ops_service.py
+
+# OS / Editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

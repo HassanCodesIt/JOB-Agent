@@ -1,0 +1,381 @@
+{% extends "base.html" %}
+
+{% block title %}Resume library - Command{% endblock %}
+
+{% block content %}
+<section class="inner-page">
+    <div class="inner-page-heading">
+        <div>
+            <div class="eyebrow">Resumes</div>
+            <div class="title" role="heading" aria-level="1">Your resume library</div>
+            <p>Keep role-specific resumes organized and ready for every application.</p>
+        </div>
+        <button class="btn btn-primary" type="button" data-open-upload>
+            <svg class="icon"><use href="#i-plus" /></svg> Add resume
+        </button>
+    </div>
+
+    <div class="prompt-box">
+        <h4><svg class="icon" style="width:.9rem;height:.9rem"><use href="#i-sparkles" /></svg> How to generate a resume summary</h4>
+        <p class="description">Copy this prompt into ChatGPT or Claude along with the resume, then paste the output into the Summary field.</p>
+        <div class="prompt-copy-text" id="summaryPrompt" style="white-space:pre-wrap" title="Click to copy" tabindex="0" role="button">Using this resume, complete every section below and return it as one clean pattern. Keep the exact section names and order, use the same facts from the resume, and never invent skills or projects:
+
+Full Name:
+Email:
+Phone:
+GitHub:
+LinkedIn:
+Portfolio:
+Skills:
+Experience:
+Projects:
+Bio:
+
+Put the whole answer inside a code box (markdown triple backticks). Use plain text only: no asterisks, no bullet points, no bold, no headings, and keep each value on one line where possible.
+
+Paste the code box into the Profile summary in Settings (Background tab) — it fills every field automatically.</div>
+        <p class="prompt-help" id="copyHint">Click the box above to copy the prompt</p>
+    </div>
+
+    <div class="launch-grid">
+        <div class="launch-main">
+            <div class="card">
+                <div class="quick-title">
+                    <span class="stat-icon violet"><svg class="icon"><use href="#i-upload" /></svg></span>
+                    <span>
+                        <strong>Primary resume</strong>
+                        <small>Attached automatically unless you override it</small>
+                    </span>
+                </div>
+                <p class="description" style="margin:.9rem 0 1rem">
+                    {% if user and user.resume_path %}{{ user.resume_path.split('\\')[-1] }}
+                    {% else %}No primary resume uploaded yet.{% endif %}
+                </p>
+                <div class="row">
+                    <a class="btn btn-secondary" href="/settings">
+                        <svg class="icon"><use href="#i-settings" /></svg> Manage in settings
+                    </a>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="quick-title">
+                    <span class="stat-icon green"><svg class="icon"><use href="#i-plus" /></svg></span>
+                    <span>
+                        <strong>Add a role-specific resume</strong>
+                        <small>The assistant can match it to the right job</small>
+                    </span>
+                </div>
+
+                <div class="form-row" style="margin-top:1.1rem">
+                    <div>
+                        <label class="form-label" for="newResumeRole">Target role</label>
+                        <input type="text" id="newResumeRole" placeholder="e.g. AI Engineer">
+                    </div>
+                </div>
+
+                <label class="form-label" for="newResumeFile">Resume PDF</label>
+                <input type="file" id="newResumeFile" accept=".pdf,application/pdf">
+                <p class="form-help" style="margin-top:.3rem">
+                    The resume is named after the file. If the file name is already taken, a (1), (2), &hellip; suffix is added automatically.
+                </p>
+
+                <label class="form-label" for="newResumeSummary" style="margin-top:.9rem">Summary</label>
+                <textarea id="newResumeSummary" rows="4" placeholder="Paste the AI-generated summary here. This helps the system match your resume to the right jobs."></textarea>
+
+                <div class="row" style="margin-top:1rem">
+                    <button class="btn btn-primary" type="button" id="btnUploadResume">
+                        <svg class="icon"><use href="#i-upload" /></svg> Upload resume
+                    </button>
+                    <span class="form-note" id="uploadStatus" hidden></span>
+                </div>
+            </div>
+        </div>
+
+        <aside class="recent-drafts">
+            <div class="section-title">Resume gallery</div>
+            <p>{{ (1 if user and user.resume_path else 0) + (resumes | length) }} in your library</p>
+
+            {% if user and user.resume_path %}
+            {% set primary_name = user.resume_path.split('\\')[-1] %}
+            <div class="draft-row primary-resume" data-search="{{ primary_name }} {{ user.resume_role or 'ai engineer' }}">
+                <span class="company-logo green">{{ primary_name[:2] | upper }}</span>
+                <span>
+                    <strong>{{ primary_name }}
+                        <span class="badge-primary">Primary</span>
+                    </strong>
+                    <small>{{ user.resume_role or 'AI Engineer' }}{% if user.resume_summary %} · summary added{% endif %}</small>
+                </span>
+                <span class="row-actions">
+                    <button type="button" title="Edit primary resume role" aria-label="Edit primary resume role"
+                        data-edit-primary="1"><svg class="icon" style="width:.95rem;height:.95rem"><use href="#i-document" /></svg></button>
+                </span>
+            </div>
+            {% endif %}
+
+            {% for resume in resumes %}
+            <div class="draft-row" style="cursor:default" data-search="{{ resume.resume_name }} {{ resume.role }}">
+                <span class="company-logo violet">{{ resume.resume_name[:2] | upper }}</span>
+                <span>
+                    <strong>{{ resume.resume_name }}</strong>
+                    <small>{{ resume.role or 'General' }}</small>
+                </span>
+                <span class="row-actions">
+                    <button type="button" title="Edit {{ resume.resume_name }}" aria-label="Edit {{ resume.resume_name }}"
+                        data-edit="{{ resume.id }}"><svg class="icon" style="width:.95rem;height:.95rem"><use href="#i-document" /></svg></button>
+                    <button type="button" title="Delete {{ resume.resume_name }}" aria-label="Delete {{ resume.resume_name }}"
+                        data-remove="{{ resume.id }}"><svg class="icon" style="width:.95rem;height:.95rem"><use href="#i-trash" /></svg></button>
+                </span>
+            </div>
+            {% else %}
+            <div class="empty-state" style="padding:1.5rem 0.5rem">
+                <svg class="icon"><use href="#i-briefcase" /></svg>
+                <p class="muted" style="margin:.5rem 0 0">No role-specific resumes yet. Add one and the assistant will match it to the right job.</p>
+            </div>
+            {% endfor %}
+        </aside>
+    </div>
+</section>
+
+<!-- Edit primary resume -->
+<div class="modal" id="primaryModal">
+    <div class="modal-content">
+        <span class="close-btn" data-close-primary>&times;</span>
+        <div class="modal-icon success"><svg class="icon"><use href="#i-briefcase" /></svg></div>
+        <h2>Primary resume</h2>
+        <p>This resume is attached to every application unless a role-specific resume is matched first.</p>
+
+        <label for="primaryFileName">File</label>
+        <input type="text" id="primaryFileName" readonly>
+
+        <label for="primaryRole">Target role</label>
+        <input type="text" id="primaryRole" value="{{ user.resume_role or 'AI Engineer' }}" placeholder="e.g. AI Engineer">
+
+        <label for="primarySummary">Summary</label>
+        <textarea id="primarySummary" rows="5"
+            placeholder="Describe the skills, projects, and experience this resume highlights, so the assistant can match it to the right jobs.">{{ user.resume_summary or '' }}</textarea>
+
+        <div class="modal-actions">
+            <button class="btn btn-secondary" data-close-primary>Cancel</button>
+            <button class="btn btn-primary" id="btnSavePrimary">Save changes</button>
+        </div>
+    </div>
+</div>
+
+<!-- Edit resume -->
+<div class="modal" id="editModal">
+    <div class="modal-content">
+        <span class="close-btn" data-close-edit>&times;</span>
+        <div class="modal-icon violet"><svg class="icon"><use href="#i-document" /></svg></div>
+        <h2>Edit resume</h2>
+        <p>Update the target role or the summary used for matching.</p>
+
+        <label for="editResumeName">Resume name (file name)</label>
+        <input type="text" id="editResumeName" readonly>
+        <p class="form-help" style="margin-top:.3rem">Rename by re-uploading the file.</p>
+
+        <label for="editResumeRole">Target role</label>
+        <input type="text" id="editResumeRole">
+
+        <label for="editResumeSummary">Summary</label>
+        <textarea id="editResumeSummary" rows="5"></textarea>
+
+        <div class="modal-actions">
+            <button class="btn btn-secondary" data-close-edit>Cancel</button>
+            <button class="btn btn-primary" id="btnSaveResume">Save changes</button>
+        </div>
+    </div>
+</div>
+
+<!-- Delete resume -->
+<div class="modal" id="deleteModal">
+    <div class="modal-content centered">
+        <div class="modal-icon danger"><svg class="icon"><use href="#i-trash" /></svg></div>
+        <h2>Delete this resume?</h2>
+        <p>This removes the resume permanently. Any pending suggestion using it will fall back to your primary resume.</p>
+        <div class="modal-actions stack-actions">
+            <button class="btn btn-secondary" data-close-delete>Cancel</button>
+            <button class="btn btn-danger" id="btnConfirmDelete">Delete</button>
+        </div>
+    </div>
+</div>
+
+<div id="resumeData" hidden>
+    {% for resume in resumes %}
+    <div data-id="{{ resume.id }}" data-name="{{ resume.resume_name }}" data-role="{{ resume.role or '' }}"
+        data-summary="{{ resume.summary or '' }}"></div>
+    {% endfor %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    (function () {
+        var editModal = ui.qs('#editModal');
+        var deleteModal = ui.qs('#deleteModal');
+        var primaryModal = ui.qs('#primaryModal');
+        var editingId = null;
+        var deletingId = null;
+
+        ui.qsa('[data-edit-primary]').forEach(function (button) {
+            ui.on(button, 'click', function () {
+                ui.qs('#primaryFileName').value = button.closest('.draft-row').querySelector('strong').childNodes[0].textContent.trim();
+                primaryModal.classList.add('active');
+            });
+        });
+
+        ui.qsa('[data-close-primary]').forEach(function (button) {
+            ui.on(button, 'click', function () { primaryModal.classList.remove('active'); });
+        });
+
+        ui.on(ui.qs('#btnSavePrimary'), 'click', async function (event) {
+            var button = event.currentTarget;
+            var payload = {
+                resume_role: ui.qs('#primaryRole').value.trim() || 'AI Engineer',
+                resume_summary: ui.qs('#primarySummary').value
+            };
+            button.disabled = true;
+
+            try {
+                await ui.request('/user/update/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                window.location.reload();
+            } catch (error) {
+                button.disabled = false;
+                ui.showStatus('Save failed', error.message, false);
+            }
+        });
+
+        ui.on(ui.qs('[data-open-upload]'), 'click', function () {
+            document.getElementById('newResumeRole').focus();
+            document.getElementById('newResumeRole').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        });
+
+        function showUploadStatus(message, ok) {
+            var node = ui.qs('#uploadStatus');
+            node.hidden = false;
+            node.innerText = message;
+            node.className = 'form-note ' + (ok ? 'ok' : 'err');
+        }
+
+        ui.on(ui.qs('#summaryPrompt'), 'click', function () {
+            var hint = ui.qs('#copyHint');
+            navigator.clipboard.writeText(this.innerText).then(function () {
+                hint.innerText = 'Copied. Paste it into ChatGPT or Claude with the resume.';
+                hint.className = 'form-note ok';
+            }).catch(function () {
+                hint.innerText = 'Select the text above and copy it manually.';
+                hint.className = 'form-note err';
+            });
+        });
+        ui.on(ui.qs('#summaryPrompt'), 'keydown', function (event) {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                event.currentTarget.click();
+            }
+        });
+
+        ui.on(ui.qs('#btnUploadResume'), 'click', async function (event) {
+            var role = ui.qs('#newResumeRole').value.trim();
+            var summary = ui.qs('#newResumeSummary').value.trim();
+            var fileInput = ui.qs('#newResumeFile');
+
+            if (!role) return showUploadStatus('Add a target role first.', false);
+            if (!fileInput.files.length) return showUploadStatus('Choose a PDF file first.', false);
+
+            var button = event.currentTarget;
+            var original = button.innerHTML;
+            button.disabled = true;
+            button.innerText = 'Uploading…';
+
+            var formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            formData.append('role', role);
+            if (summary) formData.append('summary', summary);
+
+            try {
+                await ui.request('/api/resumes/', { method: 'POST', body: formData });
+                showUploadStatus('Resume uploaded. Refreshing…', true);
+                window.setTimeout(function () { window.location.reload(); }, 900);
+            } catch (error) {
+                showUploadStatus(error.message, false);
+                button.disabled = false;
+                button.innerHTML = original;
+            }
+        });
+
+        ui.qsa('[data-edit]').forEach(function (button) {
+            ui.on(button, 'click', function () {
+                var node = ui.qs('#resumeData [data-id="' + button.getAttribute('data-edit') + '"]');
+                if (!node) return;
+                editingId = node.dataset.id;
+                ui.qs('#editResumeName').value = node.dataset.name || '';
+                ui.qs('#editResumeRole').value = node.dataset.role || '';
+                ui.qs('#editResumeSummary').value = node.dataset.summary || '';
+                editModal.classList.add('active');
+            });
+        });
+
+        ui.qsa('[data-close-edit]').forEach(function (button) {
+            ui.on(button, 'click', function () { editModal.classList.remove('active'); });
+        });
+
+        ui.on(ui.qs('#btnSaveResume'), 'click', async function (event) {
+            var button = event.currentTarget;
+            button.disabled = true;
+
+            try {
+                await ui.request('/api/resumes/' + editingId, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        resume_name: ui.qs('#editResumeName').value.trim(),
+                        role: ui.qs('#editResumeRole').value.trim(),
+                        summary: ui.qs('#editResumeSummary').value.trim()
+                    })
+                });
+                window.location.reload();
+            } catch (error) {
+                button.disabled = false;
+                ui.showStatus('Save failed', error.message, false);
+            }
+        });
+
+        ui.qsa('[data-remove]').forEach(function (button) {
+            ui.on(button, 'click', function () {
+                deletingId = button.getAttribute('data-remove');
+                deleteModal.classList.add('active');
+            });
+        });
+
+        ui.qsa('[data-close-delete]').forEach(function (button) {
+            ui.on(button, 'click', function () { deleteModal.classList.remove('active'); });
+        });
+
+        ui.on(ui.qs('#btnConfirmDelete'), 'click', async function (event) {
+            var button = event.currentTarget;
+            button.disabled = true;
+
+            try {
+                await ui.request('/api/resumes/' + deletingId, { method: 'DELETE' });
+                var source = ui.qs('#resumeData [data-id="' + deletingId + '"]');
+                var name = source ? source.dataset.name : 'this resume';
+                var row = ui.qsa('.draft-row').filter(function (node) {
+                    return node.getAttribute('data-search') && node.getAttribute('data-search').indexOf(name) === 0;
+                })[0];
+                if (row) row.remove();
+                if (source) source.remove();
+                deleteModal.classList.remove('active');
+                ui.toast(name + ' deleted');
+            } catch (error) {
+                ui.showStatus('Delete failed', error.message, false);
+            } finally {
+                button.disabled = false;
+            }
+        });
+    })();
+</script>
+{% endblock %}

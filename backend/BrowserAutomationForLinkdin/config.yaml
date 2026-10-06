@@ -1,0 +1,61 @@
+# Optional user overrides for main.py / run.py.
+# Every key is optional: anything left commented out keeps the default from
+# config.py. Delete this file to run on pure defaults.
+
+cdp_url: "http://localhost:9222"
+
+# The 7 default roles are used when this key is absent:
+#   Generative AI Engineer, AI Developer, LLM Engineer, Applied AI Engineer,
+#   Machine Learning Developer, AI Agent Engineer, AI Application Developer
+# target_roles:
+#   - "Generative AI Engineer"
+#   - "LLM Engineer"
+
+max_scrolls: 10
+max_posts: 100
+max_jds: 30
+
+# A post needs at least this many job-description sections (responsibilities,
+# requirements, skills, experience, location, salary, apply, ...) to count.
+min_jd_signals: 2
+
+# Randomised delays (politeness / anti-spam).
+action_delay: [1.0, 2.5]
+page_load_delay: [2.5, 4.5]
+
+# Stop a role search after this many scrolls without new posts.
+empty_scroll_limit: 3
+
+linkedin_feed_url: "https://www.linkedin.com/feed/"
+
+# --- Signal lists -------------------------------------------------------
+# Uncomment to REPLACE the built-in lists (regex, case-insensitive). Add as
+# many extra entries as you like; keep them commented out to use the defaults.
+#
+# positive_signals:
+#   - '\bhiring\b'
+#   - '\bwe''re hiring\b'
+#   - '\bapply (now|here|at|for|via|before|by)\b'
+#   - '\bsend (your |us |me )?(resume|cv|profile)\b'
+#   - '\binterested (candidates|professionals|applicants)\b'
+#   - '\bjob (opening|opportunity|vacancy|alert)\b'
+#
+# negative_signals:
+#   - '\bi joined\b'
+#   - '\bexcited to announce\b'
+#   - '\bcongratulat\w*\b'
+#   - '\bmy (new|latest) (role|job|article)\b'
+#   - '\bsalary (discussion|negotiation)\b'
+#   - '\bthoughts on\b'
+#
+# denied_email_domains:
+#   - example.com
+#   - domain.com
+#   - yourdomain.com
+#   - mailinator.com
+#
+# placeholder_emails:
+#   - name
+#   - yourname
+#   - email
+#   - candidate

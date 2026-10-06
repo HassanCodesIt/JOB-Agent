@@ -1,0 +1,311 @@
+{% extends "base.html" %}
+
+{% block title %}Draft studio - Command{% endblock %}
+
+{% block content %}
+{% set tones = ['violet', 'blue'] %}
+
+<section class="inner-page">
+    <div class="inner-page-heading">
+        <div>
+            <div class="eyebrow">Application workspace</div>
+            <div class="title" role="heading" aria-level="1">Draft studio</div>
+            <p>Review, refine, and send your AI-assisted applications.</p>
+        </div>
+        <a class="btn btn-primary" href="/apply"><svg class="icon"><use href="#i-plus" /></svg> New draft</a>
+    </div>
+
+    {% if processing_apps %}
+    <div class="inline-banner" id="processingBanner">
+        <span class="spinner sm"></span>
+        <div>
+            <strong>AI drafting in progress</strong>
+            <small>Your workspace refreshes automatically once every draft is ready.</small>
+        </div>
+        <div class="tag-row">
+            {% for app in processing_apps %}
+            <span class="tag">{{ app.company_name or 'Researching…' }}</span>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if drafts %}
+    <div class="draft-layout">
+        <div class="draft-list-card">
+            <div class="card-header">
+                <div>
+                    <div class="section-title">Your drafts</div>
+                    <p>{{ drafts | length }} application{{ '' if drafts | length == 1 else 's' }} ready to review</p>
+                </div>
+                <span class="filter-button">
+                    <svg class="icon" style="width:.85rem;height:.85rem"><use href="#i-clock" /></svg> Recent
+                </span>
+            </div>
+
+            <div class="draft-list" id="draftList">
+                {% for draft, app in drafts[:50] %}
+                <button class="draft-item {% if loop.first %}selected{% endif %}" type="button"
+                    data-draft-id="{{ draft.id }}"
+                    data-search="{{ app.company_name or '' }} {{ app.role or '' }} {{ app.contact_email or '' }}">
+                    <span class="company-logo {{ tones[loop.index0 % 2] }}">{{ (app.company_name or 'NA')[:2] | upper }}</span>
+                    <span class="draft-copy">
+                        <strong>{{ app.company_name or 'Company name' }}</strong>
+                        <small>{{ app.role or 'Role pending' }}</small>
+                        <small>{{ app.contact_email or 'No recipient yet' }}</small>
+                    </span>
+                    <span class="draft-time">
+                        {{ app.updated_at.strftime('%b %d') if app.updated_at else '—' }}
+                        <svg class="icon" style="width:.85rem;height:.85rem"><use href="#i-chevron" /></svg>
+                    </span>
+                </button>
+                {% endfor %}
+                {% if drafts | length > 50 %}
+                <a class="text-button" href="/sent" style="width:100%;justify-content:center;margin-top:.6rem">
+                    Showing 50 of {{ drafts | length }} — see all activity
+                    <svg class="icon" style="width:.85rem;height:.85rem"><use href="#i-arrow" /></svg>
+                </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="compose-card" id="editorCard">
+            <div class="compose-head">
+                <div>
+                    <span class="company-logo violet" id="editorLogo">–</span>
+                    <span>
+                        <strong id="editorCompany">Loading…</strong>
+                        <small id="editorRole">Fetching the latest draft</small>
+                    </span>
+                </div>
+                <span class="ai-badge">
+                    <svg class="icon" style="width:.8rem;height:.8rem"><use href="#i-sparkles" /></svg> AI draft generated
+                </span>
+            </div>
+
+            <div class="compose-fields">
+                <label><span>To</span><input id="fieldTo" type="email" placeholder="recruiter@company.com"></label>
+                <label><span>CC</span><input id="fieldCc" placeholder="Optional"></label>
+                <label><span>Subject</span><input id="fieldSubject" placeholder="Application for…"></label>
+            </div>
+
+            <textarea class="email-editor" id="fieldBody" placeholder="Your draft will appear here…"></textarea>
+
+            <div class="compose-footer">
+                <span>
+                    <svg class="icon" style="width:.85rem;height:.85rem"><use href="#i-document" /></svg>
+                    Resume attached automatically
+                    <span class="suggestion-pill" id="suggestionPill" hidden>Alternative resume available</span>
+                </span>
+                <div>
+                    <button class="btn btn-secondary" type="button" id="btnDelete"><svg class="icon"><use href="#i-trash" /></svg> Delete</button>
+                    <button class="btn btn-secondary" type="button" id="btnRegenerate"><svg class="icon"><use href="#i-refresh" /></svg> Regenerate</button>
+                    <button class="btn btn-primary" type="button" id="btnSend"><svg class="icon"><use href="#i-send" /></svg> Send application</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="empty-workspace">
+        <span class="empty-icon"><svg class="icon"><use href="#i-document" /></svg></span>
+        <div class="section-title">No drafts waiting</div>
+        <p>Launch an application and the assistant will prepare a tailored first draft for you to review.</p>
+        <a class="btn btn-secondary" href="/apply">Launch an application <svg class="icon" style="width:.85rem;height:.85rem"><use href="#i-arrow" /></svg></a>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    (function () {
+        if (document.getElementById('processingBanner')) {
+            window.setTimeout(function () { window.location.reload(); }, 3000);
+        }
+
+        var list = document.getElementById('draftList');
+        if (!list) return;
+
+        var state = { draftId: null, applicationId: null, hasSuggestion: false, resumeDecisions: {} };
+
+        var fields = {
+            company: ui.qs('#editorCompany'),
+            role: ui.qs('#editorRole'),
+            logo: ui.qs('#editorLogo'),
+            to: ui.qs('#fieldTo'),
+            cc: ui.qs('#fieldCc'),
+            subject: ui.qs('#fieldSubject'),
+            body: ui.qs('#fieldBody'),
+            suggestion: ui.qs('#suggestionPill')
+        };
+
+        var buttons = {
+            regenerate: ui.qs('#btnRegenerate'),
+            send: ui.qs('#btnSend'),
+            delete: ui.qs('#btnDelete')
+        };
+
+        function initials(value) {
+            return (value || 'NA').slice(0, 2).toUpperCase();
+        }
+
+        function setBusy(isBusy) {
+            [fields.to, fields.cc, fields.subject, fields.body].forEach(function (field) {
+                field.disabled = isBusy;
+            });
+            [buttons.regenerate, buttons.send, buttons.delete].forEach(function (button) {
+                button.disabled = isBusy;
+            });
+        }
+
+        async function loadDraft(draftId) {
+            state.draftId = draftId;
+            setBusy(true);
+            fields.body.value = '';
+
+            try {
+                var data = await ui.request('/api/drafts/' + draftId);
+                state.applicationId = data.application_id;
+                state.hasSuggestion = !!data.has_suggestion;
+
+                fields.company.innerText = data.company_name || 'Company name';
+                fields.role.innerText = data.role || 'Role pending';
+                fields.logo.innerText = initials(data.company_name);
+                fields.to.value = data.recipient || '';
+                fields.cc.value = data.cc || '';
+                fields.subject.value = data.subject || '';
+                fields.body.value = data.content || '';
+                fields.suggestion.hidden = !state.hasSuggestion;
+            } catch (error) {
+                fields.company.innerText = 'Draft unavailable';
+                fields.role.innerText = error.message;
+                ui.showStatus('Could not load draft', error.message, false);
+            } finally {
+                setBusy(false);
+            }
+        }
+
+        ui.qsa('.draft-item', list).forEach(function (item) {
+            ui.on(item, 'click', function () {
+                ui.qsa('.draft-item', list).forEach(function (node) { node.classList.remove('selected'); });
+                item.classList.add('selected');
+                loadDraft(item.getAttribute('data-draft-id'));
+            });
+        });
+
+        ui.on(buttons.regenerate, 'click', async function () {
+            var instructions = await ui.prompt({
+                title: 'Regenerate with AI',
+                message: 'Tell the assistant how to adjust this draft. Leave it blank for a standard regeneration.',
+                placeholder: 'Make it more formal, highlight my Python automation experience…'
+            });
+            if (instructions === null) return;
+
+            ui.showLoading('Applying your AI adjustments…', 'Regenerating draft');
+            try {
+                var data = await ui.postJson('/drafts/regenerate/' + state.draftId, { instructions: instructions });
+                fields.subject.value = data.subject || fields.subject.value;
+                fields.body.value = data.content || '';
+                ui.toast('Draft regenerated');
+            } catch (error) {
+                ui.showStatus('Regeneration failed', error.message, false);
+            } finally {
+                ui.hideLoading();
+            }
+        });
+
+        ui.on(buttons.delete, 'click', async function () {
+            var confirmed = await ui.confirm({
+                title: 'Discard this draft?',
+                message: 'The AI draft will be permanently deleted. The application record itself stays in your dashboard.',
+                confirmText: 'Discard draft'
+            });
+            if (!confirmed) return;
+
+            try {
+                await ui.request('/drafts/' + state.draftId, { method: 'DELETE' });
+                var item = ui.qs('.draft-item[data-draft-id="' + state.draftId + '"]');
+                if (item) item.remove();
+                var remaining = ui.qs('.draft-item');
+                if (remaining) {
+                    remaining.classList.add('selected');
+                    loadDraft(remaining.getAttribute('data-draft-id'));
+                } else {
+                    window.location.reload();
+                }
+                ui.toast('Draft discarded');
+            } catch (error) {
+                ui.showStatus('Delete failed', error.message, false);
+            }
+        });
+
+        async function fetchResumeSuggestion(appId) {
+            try {
+                var data = await ui.request('/api/applications/' + appId + '/suggestion');
+                return data && data.suggested_resume_id ? data : null;
+            } catch (error) {
+                return null;
+            }
+        }
+
+        ui.on(buttons.send, 'click', async function () {
+            var recipient = fields.to.value.trim();
+            var subject = fields.subject.value.trim();
+            var content = fields.body.value;
+            var cc = fields.cc.value.trim();
+
+            if (!recipient) {
+                ui.showStatus('Missing info', 'Add a recipient email address before sending.', false);
+                fields.to.focus();
+                return;
+            }
+
+            var payload = { recipient: recipient, subject: subject, content: content };
+            if (cc) payload.cc = cc.split(',').map(function (entry) { return entry.trim(); }).filter(Boolean);
+
+            if (state.hasSuggestion && !(state.draftId in state.resumeDecisions)) {
+                var suggestion = await fetchResumeSuggestion(state.applicationId);
+                if (suggestion) {
+                    var accepted = await ui.confirm({
+                        title: 'Send a different resume?',
+                        message: 'This role looks like a better match for "' + (suggestion.suggested_resume_name || 'a role-specific resume') +
+                            '"' + (suggestion.suggested_resume_role ? ' (' + suggestion.suggested_resume_role + ')' : '') +
+                            '. Sending it replaces your Primary Resume for this application. Your email draft is unchanged either way.',
+                        confirmText: 'Send this resume',
+                        cancelText: 'Use primary'
+                    });
+                    state.resumeDecisions[state.draftId] = accepted ? suggestion.suggested_resume_id : null;
+                } else {
+                    state.resumeDecisions[state.draftId] = null;
+                }
+            }
+
+            var decision = state.resumeDecisions[state.draftId];
+            if (decision) payload.resume_id = decision;
+
+            setBusy(true);
+            ui.showLoading('Delivering application to ' + recipient + '…', 'Sending application');
+
+            try {
+                await ui.postJson('/emails/send/' + state.draftId, payload);
+                var item = ui.qs('.draft-item[data-draft-id="' + state.draftId + '"]');
+                if (item) {
+                    item.style.opacity = '0.3';
+                    item.style.pointerEvents = 'none';
+                    window.setTimeout(function () { item.remove(); }, 700);
+                }
+                ui.hideLoading();
+                ui.showStatus('Application sent',
+                    'Your application reached ' + recipient + '. Track recruiter replies in the reply center.');
+            } catch (error) {
+                ui.showStatus('Delivery failed', error.message, false);
+            } finally {
+                setBusy(false);
+            }
+        });
+
+        var first = ui.qs('.draft-item.selected') || ui.qs('.draft-item');
+        if (first) loadDraft(first.getAttribute('data-draft-id'));
+    })();
+</script>
+{% endblock %}

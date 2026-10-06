@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block title %}Sent history - Command{% endblock %}
+
+{% block content %}
+{% set recent = sent_emails[:60] %}
+
+<section class="inner-page">
+    <div class="inner-page-heading">
+        <div>
+            <div class="eyebrow">Sent history</div>
+            <div class="title" role="heading" aria-level="1">Everything you've delivered</div>
+            <p>Every application and outreach email, kept on record.</p>
+        </div>
+        <a class="btn btn-primary" href="/apply"><svg class="icon"><use href="#i-plus" /></svg> Add application</a>
+    </div>
+
+    <div class="stat-strip">
+        <div class="mini-stat">
+            <strong>{{ sent_emails | length }}</strong>
+            <span>Emails delivered</span>
+        </div>
+        <div class="mini-stat">
+            <strong class="green-text">{{ sent_emails | selectattr('0.status', 'equalto', 'sent') | list | length }}</strong>
+            <span>Confirmed sent</span>
+        </div>
+        <div class="mini-stat">
+            <strong>{{ recent | length }}</strong>
+            <span>Shown below</span>
+        </div>
+    </div>
+
+    {% if recent %}
+    <div class="list-rows">
+        {% for email, app in recent %}
+        <div class="mail-row" style="grid-template-columns:auto minmax(0,2fr) auto auto"
+            data-search="{{ email.subject }} {{ email.recipient_email }} {{ app.company_name if app else '' }} {{ app.role if app else '' }}">
+            <span class="company-logo violet">{{ (app.company_name if app and app.company_name else email.recipient_email or 'NA')[:2] | upper }}</span>
+            <span class="mail-preview">
+                <strong>{{ email.subject or 'No subject' }}</strong>
+                <span>{{ email.recipient_email or 'Unknown recipient' }}{% if app and app.company_name %} · {{ app.company_name }}{% endif %}</span>
+            </span>
+            <span class="status-pill status-positive_response"><span></span>{{ email.status or 'sent' }}</span>
+            <button class="icon-button" type="button" data-email="{{ email.id }}"
+                aria-label="View full message to {{ email.recipient_email }}" title="View full message">
+                <svg class="icon"><use href="#i-mail" /></svg>
+            </button>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if sent_emails | length > 60 %}
+    <p class="muted" style="margin:1rem 0 0;font-size:.62rem">
+        Showing the 60 most recent of {{ sent_emails | length }} delivered emails.
+    </p>
+    {% endif %}
+    {% else %}
+    <div class="empty-workspace">
+        <span class="empty-icon"><svg class="icon"><use href="#i-send" /></svg></span>
+        <div class="section-title">No sent history yet</div>
+        <p>Your delivered applications and outreach emails will be listed here.</p>
+        <a class="btn btn-primary" href="/drafts">Review pending drafts
+            <svg class="icon" style="width:.9rem;height:.9rem"><use href="#i-arrow" /></svg>
+        </a>
+    </div>
+    {% endif %}
+</section>
+
+<div class="modal" id="emailModal">
+    <div class="modal-content">
+        <span class="close-btn" data-close-email>&times;</span>
+        <div class="modal-icon violet"><svg class="icon"><use href="#i-mail" /></svg></div>
+        <h2 id="emailModalTitle">Sent email</h2>
+        <div class="email-meta"><span>To</span><strong id="emailModalTo">—</strong></div>
+        <div class="email-meta"><span>Sent</span><strong id="emailModalWhen">—</strong></div>
+        <div class="email-body" id="emailModalBody" style="min-height:14rem"></div>
+        <div class="modal-actions">
+            <button class="btn btn-secondary" data-close-email>Close</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    (function () {
+        var modal = ui.qs('#emailModal');
+
+        ui.qsa('[data-close-email]').forEach(function (button) {
+            ui.on(button, 'click', function () { modal.classList.remove('active'); });
+        });
+
+        ui.qsa('[data-email]').forEach(function (button) {
+            ui.on(button, 'click', async function () {
+                button.disabled = true;
+                ui.qs('#emailModalTitle').innerText = 'Loading…';
+                ui.qs('#emailModalBody').innerText = '';
+                modal.classList.add('active');
+
+                try {
+                    var data = await ui.request('/api/sent-emails/' + button.getAttribute('data-email'));
+                    ui.qs('#emailModalTitle').innerText = data.subject || 'Sent email';
+                    ui.qs('#emailModalTo').innerText = data.recipient_email || 'Unknown recipient';
+                    ui.qs('#emailModalWhen').innerText = data.sent_at || '—';
+                    ui.qs('#emailModalBody').innerText = data.body || 'This email has no stored body.';
+                } catch (error) {
+                    ui.qs('#emailModalTitle').innerText = 'Unavailable';
+                    ui.qs('#emailModalBody').innerText = error.message;
+                } finally {
+                    button.disabled = false;
+                }
+            });
+        });
+    })();
+</script>
+{% endblock %}

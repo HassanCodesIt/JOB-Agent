@@ -1,0 +1,23 @@
+Priya Raghavan
+Northwind Labs is hiring an AI Engineer to build our generative AI platform.
+
+Company: Northwind Labs
+Location: Bengaluru (Hybrid)
+Employment type: Full-time
+Experience: 3-5 years
+Salary: 25-35 LPA
+
+Skills:
+- Python
+- PyTorch
+- LLM orchestration
+
+Responsibilities:
+- Build and ship generative AI features
+- Partner with product and design teams
+
+Requirements:
+- Strong understanding of machine learning
+- Hands-on experience with RAG pipelines
+
+Apply: send your resume to hr@northwindlabs.com

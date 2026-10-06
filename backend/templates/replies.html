@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}Reply center - Command{% endblock %}
+
+{% block content %}
+<section class="inner-page">
+    <div class="inner-page-heading">
+        <div>
+            <div class="eyebrow">Reply center</div>
+            <div class="title" role="heading" aria-level="1">Inbox zero starts here</div>
+            <p>Track recruiter replies and keep every conversation moving.</p>
+        </div>
+        <button class="btn btn-secondary" type="button" data-sync style="background:transparent">
+            <svg class="icon"><use href="#i-refresh" /></svg> Refresh inbox
+        </button>
+    </div>
+
+    <div class="stat-strip">
+        <div class="mini-stat">
+            <strong>{{ emails | length }}</strong>
+            <span>Recent conversations</span>
+        </div>
+        <div class="mini-stat">
+            <strong>{{ emails | selectattr('classification', 'equalto', 'positive') | list | length }}</strong>
+            <span>Shortlisted</span>
+        </div>
+        <div class="mini-stat">
+            <strong>{{ emails | selectattr('classification', 'equalto', 'neutral') | list | length }}</strong>
+            <span>Job related</span>
+        </div>
+        <div class="mini-stat">
+            <strong>{{ emails | selectattr('application_id', 'none') | list | length }}</strong>
+            <span>Unlinked</span>
+        </div>
+    </div>
+
+    {% if emails %}
+    <div class="list-rows">
+        {% for email in emails %}
+        {% set linked = email.application_id %}
+        <a class="mail-row" href="{% if linked %}/replies/{{ linked }}{% else %}#{% endif %}"
+            data-unlinked="{% if linked %}0{% else %}1{% endif %}"
+            data-label="{{ email.subject }}"
+            data-search="{{ email.sender }} {{ email.subject }} {{ email.snippet or '' }}">
+            <span class="mail-sender">
+                {{ email.sender.split('<')[0].strip() if '<' in email.sender else email.sender }}
+            </span>
+            <span class="mail-preview">
+                <strong>{{ email.subject }}</strong>
+                {% if email.snippet %}<span>- {{ email.snippet[:120] }}…</span>{% endif %}
+                {% if email.classification == 'positive' %}
+                <span class="status-pill status-positive_response"><span></span>Shortlisted</span>
+                {% elif email.classification == 'neutral' %}
+                <span class="status-pill status-draft"><span></span>Job related</span>
+                {% endif %}
+            </span>
+            <span class="mail-time">
+                {% if email.received_at and email.received_at.date() == now.date() %}
+                {{ email.received_at.strftime('%I:%M %p') }}
+                {% elif email.received_at %}
+                {{ email.received_at.strftime('%b %d') }}
+                {% else %}
+                —
+                {% endif %}
+            </span>
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-workspace">
+        <span class="empty-icon"><svg class="icon"><use href="#i-inbox" /></svg></span>
+        <div class="section-title">Your inbox is empty</div>
+        <p>Refresh to fetch the latest conversations from your Primary Gmail label. New recruiter replies get classified automatically.</p>
+        <button class="btn btn-primary" type="button" data-sync>
+            <svg class="icon"><use href="#i-refresh" /></svg> Refresh inbox
+        </button>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    ui.qsa('.mail-row[data-unlinked="1"]').forEach(function (row) {
+        ui.on(row, 'click', function (event) {
+            event.preventDefault();
+            ui.showStatus('Not linked to an application',
+                'This message is not tied to a tracked application, so there is no conversation to open yet.', false);
+        });
+    });
+</script>
+{% endblock %}

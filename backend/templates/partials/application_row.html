@@ -1,0 +1,29 @@
+<article class="application-row"
+    data-search="{{ item.company_name or '' }} {{ item.role or '' }} {{ (item.status or '') | replace('_', ' ') }}">
+    <div class="company-cell">
+        <span class="company-logo {{ item.tone }}">
+            {{ (item.company_name or 'NA')[:2] | upper }}
+        </span>
+        <span>
+            <strong>{{ item.company_name or 'Unknown company' }}</strong>
+            <small>{{ item.role or 'Position pending' }}</small>
+        </span>
+    </div>
+    <div>
+        <span class="status-pill status-{{ item.status }}"><span></span>{{ (item.status or '') | replace('_', ' ') }}</span>
+    </div>
+    <time datetime="{{ item.updated_at }}">{{ item.updated_label }}</time>
+    <div class="row-actions">
+        {% if item.has_source %}
+        <button type="button" title="View source text" aria-label="View source text for {{ item.company_name }}"
+            class="js-view-source" data-id="{{ item.id }}"
+            data-label="Original job details - {{ item.company_name or 'this role' }}"><svg class="icon"><use href="#i-document" /></svg></button>
+        {% endif %}
+        {% if item.has_email %}
+        <button type="button" title="View last email" aria-label="View last email to {{ item.company_name }}"
+            class="js-view-email" data-id="{{ item.id }}"><svg class="icon"><use href="#i-mail" /></svg></button>
+        {% endif %}
+        <button type="button" title="Delete record" aria-label="Delete {{ item.company_name }}"
+            class="js-delete-app" data-id="{{ item.id }}" data-company="{{ item.company_name or 'this record' }}"><svg class="icon"><use href="#i-trash" /></svg></button>
+    </div>
+</article>

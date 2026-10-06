@@ -1,0 +1,384 @@
+{% extends "base.html" %}
+
+{% block title %}Settings - Command{% endblock %}
+
+{% block content %}
+<section class="inner-page">
+    <div class="inner-page-heading">
+        <div>
+            <div class="eyebrow">Settings</div>
+            <div class="title" role="heading" aria-level="1">Your global configuration</div>
+            <p>These details are injected into every draft, application, and reply the agent writes.</p>
+        </div>
+        <button class="btn btn-primary" type="button" id="btnSaveSettings">
+            <svg class="icon"><use href="#i-check" /></svg> Save changes
+        </button>
+    </div>
+
+    <div class="settings-tabs" role="tablist">
+        <button class="settings-tab active" type="button" role="tab" aria-selected="true" data-tab="profile">Identity &amp; contact</button>
+        <button class="settings-tab" type="button" role="tab" aria-selected="false" data-tab="background">Background</button>
+        <button class="settings-tab" type="button" role="tab" aria-selected="false" data-tab="ai">AI configuration</button>
+        <button class="settings-tab" type="button" role="tab" aria-selected="false" data-tab="resume">Resume</button>
+    </div>
+
+    <div class="card">
+        <!-- Identity -->
+        <div class="settings-panel active" data-panel="profile">
+            <div class="panel-title">
+                <span class="stat-icon violet"><svg class="icon"><use href="#i-user" /></svg></span>
+                <span><strong>Identity &amp; contact</strong><small>Used to sign off outgoing applications and emails</small></span>
+            </div>
+
+            <div class="form-row" style="margin-top:1.2rem">
+                <div>
+                    <label class="form-label" for="fullName">Full name</label>
+                    <input type="text" id="fullName" value="{{ user.full_name or '' }}" placeholder="Your full name">
+                </div>
+                <div>
+                    <label class="form-label" for="userEmail">Email address</label>
+                    <input type="email" id="userEmail" value="{{ user.email or '' }}" placeholder="you@example.com">
+                </div>
+            </div>
+
+            <div class="form-row" style="margin-top:1.1rem">
+                <div>
+                    <label class="form-label" for="userPhone">Phone number</label>
+                    <input type="text" id="userPhone" value="{{ user.phone or '' }}" placeholder="+1 555 000 0000">
+                </div>
+                <div>
+                    <label class="form-label" for="userGithub">GitHub link</label>
+                    <input type="text" id="userGithub" value="{{ link_github or '' }}" placeholder="github.com/you">
+                </div>
+            </div>
+
+            <div class="form-row" style="margin-top:1.1rem">
+                <div>
+                    <label class="form-label" for="userLinkedin">LinkedIn link</label>
+                    <input type="text" id="userLinkedin" value="{{ link_linkedin or '' }}" placeholder="linkedin.com/in/you">
+                </div>
+                <div>
+                    <label class="form-label" for="userPortfolio">Portfolio link</label>
+                    <input type="text" id="userPortfolio" value="{{ link_portfolio or '' }}" placeholder="yoursite.com">
+                </div>
+            </div>
+
+            <label class="form-label" for="userSkills" style="margin-top:1.1rem">Core skills</label>
+            <textarea id="userSkills" rows="3" placeholder="Python, FastAPI, React, PostgreSQL…">{{ user.skills or '' }}</textarea>
+        </div>
+
+        <!-- Background -->
+        <div class="settings-panel" data-panel="background" hidden>
+            <div class="panel-title">
+                <span class="stat-icon cyan"><svg class="icon"><use href="#i-briefcase" /></svg></span>
+                <span><strong>Professional background</strong><small>Context the agent reuses across every application</small></span>
+            </div>
+
+            <div class="prompt-box" style="margin-top:1.2rem">
+                <h4><svg class="icon" style="width:.9rem;height:.9rem"><use href="#i-sparkles" /></svg> How to generate your profile summary</h4>
+                <p class="description">Copy this prompt into ChatGPT or Claude along with your resume, then paste the result into the profile summary below.</p>
+                <div class="prompt-copy-text" id="profilePrompt" title="Click to copy" tabindex="0" role="button">Loading prompt…</div>
+                <p class="prompt-help" id="profilePromptHint">Click the box above to copy the prompt</p>
+            </div>
+
+            <div class="field-block" style="margin-top:1.2rem">
+                <div class="row-between" style="align-items:flex-start">
+                    <div>
+                        <label class="form-label" for="profileSummary">Profile summary</label>
+                        <p class="form-help" style="margin-top:0">
+                            One block covering every section. Editing it and applying pushes values into the
+                            fields below; editing any field rebuilds this block.
+                        </p>
+                    </div>
+                    <div class="row" style="gap:.4rem;flex-shrink:0">
+                        <button class="btn btn-secondary btn-sm" type="button" id="btnRebuildSummary">Rebuild</button>
+                        <button class="btn btn-primary btn-sm" type="button" id="btnApplySummary">Apply to fields</button>
+                    </div>
+                </div>
+                <textarea id="profileSummary" rows="12" placeholder="Paste the AI summary here, or write your own."></textarea>
+            </div>
+
+            <label class="form-label" for="userExperience" style="margin-top:1.2rem">Experience</label>
+            <textarea id="userExperience" rows="5" placeholder="Roles, years of experience, industries, team size…">{{ user.experience or '' }}</textarea>
+
+            <label class="form-label" for="userProjects" style="margin-top:1.1rem">Projects</label>
+            <textarea id="userProjects" rows="5" placeholder="Notable projects with impact and tech stack…">{{ user.projects or '' }}</textarea>
+
+            <label class="form-label" for="userStandardAnswers" style="margin-top:1.1rem">Standard answers &amp; bio</label>
+            <textarea id="userStandardAnswers" rows="4" placeholder="A short bio, or canned answers to common recruiter questions.">{{ user.standard_answers or '' }}</textarea>
+        </div>
+
+        <!-- AI configuration -->
+        <div class="settings-panel" data-panel="ai" hidden>
+            <div class="panel-title">
+                <span class="stat-icon orange"><svg class="icon"><use href="#i-sparkles" /></svg></span>
+                <span><strong>AI configuration</strong><small>Keys are stored locally in your own database</small></span>
+            </div>
+
+            <div class="key-field" style="margin-top:1.2rem">
+                <label class="form-label" for="groqKey">Groq API key</label>
+                <div class="input-with-action">
+                    <input type="password" id="groqKey" value="{{ user.groq_api_key or '' }}" placeholder="gsk_…">
+                    <button type="button" class="input-action" data-toggle-secret="groqKey" aria-label="Show or hide Groq API key">
+                        <svg class="icon"><use href="#i-eye" /></svg>
+                    </button>
+                </div>
+                <p class="form-help">Primary drafting model.</p>
+            </div>
+
+            <div class="key-field">
+                <label class="form-label" for="openrouterKey">OpenRouter API key</label>
+                <div class="input-with-action">
+                    <input type="password" id="openrouterKey" value="{{ user.openrouter_api_key or '' }}" placeholder="sk-or-…">
+                    <button type="button" class="input-action" data-toggle-secret="openrouterKey" aria-label="Show or hide OpenRouter API key">
+                        <svg class="icon"><use href="#i-eye" /></svg>
+                    </button>
+                </div>
+                <p class="form-help">Used automatically when Groq is unavailable.</p>
+            </div>
+
+            <div class="key-field">
+                <label class="form-label" for="hfToken">Hugging Face token</label>
+                <div class="input-with-action">
+                    <input type="password" id="hfToken" value="{{ user.hf_token or '' }}" placeholder="hf_…">
+                    <button type="button" class="input-action" data-toggle-secret="hfToken" aria-label="Show or hide Hugging Face token">
+                        <svg class="icon"><use href="#i-eye" /></svg>
+                    </button>
+                </div>
+                <p class="form-help">Optional. Raises OCR limits when reading job posters as images.</p>
+            </div>
+
+            <label class="form-label" for="systemPrompt" style="margin-top:1.1rem">Custom drafting instructions</label>
+            <textarea id="systemPrompt" rows="4" placeholder="e.g. Write in a professional but enthusiastic tone and always mention my open-source work.">{{ user.system_prompt or '' }}</textarea>
+        </div>
+
+        <!-- Resume -->
+        <div class="settings-panel" data-panel="resume" hidden>
+            <div class="panel-title">
+                <span class="stat-icon green"><svg class="icon"><use href="#i-file" /></svg></span>
+                <span><strong>Primary resume</strong><small>Attached automatically unless a role-specific resume is matched</small></span>
+            </div>
+
+            <div class="file-picker">
+                <span class="file-icon"><svg class="icon"><use href="#i-file" /></svg></span>
+                <span>
+                    <strong id="resumeName">{{ user.resume_path.split('\\')[-1] if user.resume_path else 'No file uploaded' }}</strong>
+                    <small>PDF only, stored on this machine</small>
+                </span>
+                <input type="file" id="resumeUpload" accept=".pdf,application/pdf" hidden>
+                <button class="btn btn-secondary" type="button" id="btnPickResume">Upload new</button>
+            </div>
+
+            <label class="form-label" for="resumeRole" style="margin-top:1.2rem">Target role for this resume</label>
+            <input type="text" id="resumeRole" value="{{ user.resume_role or 'AI Engineer' }}" placeholder="e.g. AI Engineer">
+            <p class="form-help">Shown in the resume gallery and used when matching applications.</p>
+
+            <div class="row" style="margin-top:1.2rem">
+                <a class="btn btn-secondary btn-sm" href="/resumes">
+                    <svg class="icon" style="width:.9rem;height:.9rem"><use href="#i-briefcase" /></svg> Manage role-specific resumes
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row row-end" style="margin-top:1.2rem">
+        <span class="form-note" id="saveStatus" hidden></span>
+        <button class="btn btn-primary" type="button" id="btnSaveSettingsBottom">Save changes</button>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    (function () {
+        var saveButtons = [ui.qs('#btnSaveSettings'), ui.qs('#btnSaveSettingsBottom')];
+
+        ui.qsa('[data-tab]').forEach(function (tab) {
+            ui.on(tab, 'click', function () {
+                var name = tab.getAttribute('data-tab');
+                ui.qsa('[data-tab]').forEach(function (other) {
+                    var active = other === tab;
+                    other.classList.toggle('active', active);
+                    other.setAttribute('aria-selected', active ? 'true' : 'false');
+                });
+                ui.qsa('[data-panel]').forEach(function (panel) {
+                    var active = panel.getAttribute('data-panel') === name;
+                    panel.classList.toggle('active', active);
+                    panel.hidden = !active;
+                });
+            });
+        });
+
+        ui.qsa('[data-toggle-secret]').forEach(function (button) {
+            ui.on(button, 'click', function () {
+                var input = ui.qs('#' + button.getAttribute('data-toggle-secret'));
+                var hidden = input.type === 'password';
+                input.type = hidden ? 'text' : 'password';
+                button.setAttribute('aria-pressed', hidden ? 'true' : 'false');
+            });
+        });
+
+        function setStatus(message, ok) {
+            var node = ui.qs('#saveStatus');
+            node.hidden = false;
+            node.innerText = message;
+            node.className = 'form-note ' + (ok ? 'ok' : 'err');
+        }
+
+        /* ------------------------------------------- profile summary (2-way) */
+
+        var summaryField = ui.qs('#profileSummary');
+        var promptBox = ui.qs('#profilePrompt');
+        var applyingSummary = false;
+
+        function refreshPrompt() {
+            if (!promptBox) return;
+            promptBox.innerText = ui.buildProfilePrompt(ui.collectProfileValues(document));
+        }
+
+        function rebuildSummary(notify) {
+            if (!summaryField || applyingSummary) return;
+            summaryField.value = ui.buildProfileSummary(ui.collectProfileValues(document));
+            if (notify) setStatus('Profile summary rebuilt from the fields.', true);
+        }
+
+        function applySummary() {
+            if (!summaryField) return;
+            var parsed = ui.parseProfileSummary(summaryField.value);
+            var changed = ui.profileSections.filter(function (section) {
+                return parsed[section.key] && parsed[section.key] !== collectValue(section.field);
+            });
+            if (!changed.length) {
+                setStatus('Nothing new to apply — the summary already matches the fields.', false);
+                return;
+            }
+            applyingSummary = true;
+            ui.applyProfileValues(parsed, document);
+            applyingSummary = false;
+            refreshPrompt();
+            setStatus('Applied ' + changed.length + ' section' + (changed.length === 1 ? '' : 's') + ' to your profile. Remember to save.', true);
+        }
+
+        function collectValue(field) {
+            var node = ui.qs('#' + field);
+            return node ? node.value : '';
+        }
+
+        if (summaryField) {
+            // Seed from the stored summary, or build it from the current fields.
+            if (!summaryField.value.trim()) summaryField.value = ui.buildProfileSummary(ui.collectProfileValues(document));
+
+            ui.on(ui.qs('#btnApplySummary'), 'click', applySummary);
+            ui.on(ui.qs('#btnRebuildSummary'), 'click', function () { rebuildSummary(true); });
+
+            // Any edit to an individual field rebuilds the summary block.
+            ui.profileSections.forEach(function (section) {
+                var node = ui.qs('#' + section.field);
+                if (!node) return;
+                ui.on(node, 'input', function () {
+                    if (applyingSummary) return;
+                    rebuildSummary(false);
+                    refreshPrompt();
+                });
+            });
+        }
+
+        refreshPrompt();
+
+        ui.on(promptBox, 'click', copyPrompt);
+        ui.on(promptBox, 'keydown', function (event) {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                copyPrompt.call(this);
+            }
+        });
+
+        function copyPrompt() {
+            var hint = ui.qs('#profilePromptHint');
+            navigator.clipboard.writeText(promptBox.innerText).then(function () {
+                hint.innerText = 'Copied. Paste it into ChatGPT or Claude with your resume.';
+                hint.className = 'prompt-help ok';
+            }).catch(function () {
+                hint.innerText = 'Select the text above and copy it manually.';
+                hint.className = 'prompt-help err';
+            });
+        }
+
+        async function saveAllSettings() {
+            var payload = {
+                full_name: ui.qs('#fullName').value.trim(),
+                email: ui.qs('#userEmail').value.trim(),
+                phone: ui.qs('#userPhone').value.trim(),
+                github_link: ui.qs('#userGithub').value.trim(),
+                linkedin_link: ui.qs('#userLinkedin').value.trim(),
+                portfolio_link: ui.qs('#userPortfolio').value.trim(),
+                skills: ui.qs('#userSkills').value,
+                experience: ui.qs('#userExperience').value,
+                projects: ui.qs('#userProjects').value,
+                standard_answers: ui.qs('#userStandardAnswers').value,
+                groq_api_key: ui.qs('#groqKey').value.trim(),
+                openrouter_api_key: ui.qs('#openrouterKey').value.trim(),
+                hf_token: ui.qs('#hfToken').value.trim(),
+                system_prompt: ui.qs('#systemPrompt').value
+            };
+
+            var resumeRoleField = ui.qs('#resumeRole');
+            if (resumeRoleField) payload.resume_role = resumeRoleField.value.trim() || 'AI Engineer';
+
+            var summaryBox = ui.qs('#profileSummary');
+            if (summaryBox) payload.profile_summary = summaryBox.value;
+
+            saveButtons.forEach(function (button) { button.disabled = true; });
+            setStatus('Saving configuration…', true);
+
+            try {
+                await ui.request('/user/update/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                setStatus('Settings saved.', true);
+                ui.toast('Settings saved');
+            } catch (error) {
+                setStatus(error.message, false);
+            } finally {
+                saveButtons.forEach(function (button) { button.disabled = false; });
+            }
+        }
+
+        saveButtons.forEach(function (button) {
+            ui.on(button, 'click', saveAllSettings);
+        });
+
+        ui.on(ui.qs('#btnPickResume'), 'click', function () {
+            ui.qs('#resumeUpload').click();
+        });
+
+        ui.on(ui.qs('#resumeUpload'), 'change', async function (event) {
+            var input = event.currentTarget;
+            if (!input.files.length) return;
+
+            var button = ui.qs('#btnPickResume');
+            var original = button.innerHTML;
+            button.disabled = true;
+            button.innerText = 'Uploading…';
+
+            var formData = new FormData();
+            formData.append('file', input.files[0]);
+
+            try {
+                await ui.request('/user/resume/', { method: 'POST', body: formData });
+                ui.qs('#resumeName').innerText = input.files[0].name;
+                setStatus('Resume updated and ready for applications.', true);
+                ui.toast('Resume updated');
+            } catch (error) {
+                setStatus(error.message, false);
+            } finally {
+                button.disabled = false;
+                button.innerHTML = original;
+                input.value = '';
+            }
+        });
+    })();
+</script>
+{% endblock %}
